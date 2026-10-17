@@ -20,6 +20,7 @@ import {
   Sparkles,
   AlertTriangle,
   X,
+  Trash2,
 } from "lucide-react";
 
 interface TournamentStatsBarProps {
@@ -30,6 +31,7 @@ interface TournamentStatsBarProps {
   currentUserRole: UserRole;
   onGenerateBracket: () => void;
   onResetTournament: () => void;
+  onDeleteTournament?: () => void;
 }
 
 export const TournamentStatsBar: React.FC<TournamentStatsBarProps> = ({
@@ -40,12 +42,14 @@ export const TournamentStatsBar: React.FC<TournamentStatsBarProps> = ({
   currentUserRole,
   onGenerateBracket,
   onResetTournament,
+  onDeleteTournament,
 }) => {
   const isOrganizer = currentUserRole === "organizer" || currentUserRole === "admin";
   const stats = calculateTournamentStats(tournament.status, participants, matches);
 
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const isBracketGenerated = matches.length > 0;
   const canGenerate = participants.length >= 2;
@@ -184,14 +188,73 @@ export const TournamentStatsBar: React.FC<TournamentStatsBarProps> = ({
                 </span>
               </button>
             ) : (
-              <button
-                onClick={() => setIsResetConfirmOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-arena-surface border border-arena-border hover:border-arena-danger hover:text-arena-danger text-arena-muted text-xs font-semibold transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Bracket</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsResetConfirmOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-arena-surface border border-arena-border hover:border-arena-danger hover:text-arena-danger text-arena-muted text-xs font-semibold transition"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Bracket</span>
+                </button>
+
+                {tournament.status === "completed" && onDeleteTournament && (
+                  <button
+                    onClick={() => setIsDeleteConfirmOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-arena-danger/15 border border-arena-danger/40 hover:bg-arena-danger hover:text-white text-arena-danger text-xs font-bold transition shadow-sm"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Tournament</span>
+                  </button>
+                )}
+              </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Tournament Confirmation Modal */}
+      {isDeleteConfirmOpen && onDeleteTournament && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/85 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-md bg-arena-elevated border border-arena-danger/40 rounded-2xl p-6 shadow-2xl">
+            <button
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg bg-arena-surface border border-arena-border text-arena-muted hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-arena-danger/20 border border-arena-danger/40 flex items-center justify-center text-arena-danger">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Completed Tournament?</h3>
+                <p className="text-xs text-arena-muted">Destructive tournament action</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-arena-muted mb-6 leading-relaxed">
+              Are you sure you want to permanently delete{" "}
+              <strong className="text-white">{tournament.name}</strong>? This will permanently erase all match results, bracket history, and participant logs. This action cannot be undone.
+            </p>
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs text-arena-muted hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteTournament();
+                  setIsDeleteConfirmOpen(false);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-arena-danger hover:bg-red-500 text-white text-xs font-bold transition shadow-glow-danger"
+              >
+                Delete Tournament
+              </button>
+            </div>
           </div>
         </div>
       )}

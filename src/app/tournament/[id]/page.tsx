@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   getTournamentById,
@@ -9,6 +9,7 @@ import {
   recordMatchWinner,
   correctMatchResult,
   resetTournament,
+  deleteTournament,
   addParticipant,
   bulkAddParticipants,
   updateParticipantName,
@@ -41,10 +42,11 @@ import {
 
 export default function TournamentDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const tournamentId = params?.id as string;
 
   const [details, setDetails] = useState<TournamentDetails | null>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<UserRole>("organizer");
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole>("participant");
   const [activeTab, setActiveTab] = useState<"bracket" | "participants" | "settings">("bracket");
 
   // Cinematic Winner Elimination State
@@ -244,7 +246,17 @@ export default function TournamentDetailPage() {
     }
   };
 
-  // 7. Participant Roster Actions
+  // 7. Delete Completed Tournament
+  const handleDeleteTournament = () => {
+    try {
+      deleteTournament(tournament.id);
+      router.push("/");
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed to delete tournament.");
+    }
+  };
+
+  // 8. Participant Roster Actions
   const handleAddParticipant = (name: string, seed?: number) => {
     addParticipant(tournament.id, name, tournament.participant_type, seed);
     loadData();
@@ -360,6 +372,7 @@ export default function TournamentDetailPage() {
           currentUserRole={currentUserRole}
           onGenerateBracket={handleGenerateBracket}
           onResetTournament={handleResetTournament}
+          onDeleteTournament={handleDeleteTournament}
         />
 
         {/* Tab Navigation */}

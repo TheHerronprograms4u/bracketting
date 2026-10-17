@@ -2,13 +2,18 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   getTournaments,
   addParticipant,
+  deleteTournament,
   initStorage,
+  getCurrentUser,
+  setCurrentUserRole,
 } from "@/lib/storage";
-import { Tournament } from "@/types/tournament";
+import { Tournament, UserRole } from "@/types/tournament";
 import { Navbar } from "@/components/Navbar";
+import { PasswordModal } from "@/components/PasswordModal";
 import {
   Trophy,
   Users,
@@ -22,12 +27,24 @@ import {
   CheckCircle2,
   X,
   AlertCircle,
+  Trash2,
+  Lock,
 } from "lucide-react";
 
 export default function HomePage() {
+  const router = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentUserRole, setCurrentUserRoleState] = useState<UserRole>("participant");
+
+  // Deletion modal state for completed tournaments
+  const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+
+  // Staff unlock modal state (for participant clicking create)
+  const [isStaffPasswordModalOpen, setIsStaffPasswordModalOpen] = useState(false);
 
   // Registration Modal State for quick user entry
   const [registeringTournament, setRegisteringTournament] = useState<Tournament | null>(null);
@@ -39,15 +56,28 @@ export default function HomePage() {
     initStorage();
     const list = getTournaments();
     setTournaments(list);
+    const user = getCurrentUser();
+    setCurrentUserRoleState(user.role);
   };
 
   useEffect(() => {
     refreshTournaments();
+
+    const handleRoleChanged = () => {
+      const user = getCurrentUser();
+      setCurrentUserRoleState(user.role);
+    };
+
     const handleStorageSynced = () => {
       refreshTournaments();
     };
+
+    window.addEventListener("arena_role_changed", handleRoleChanged);
     window.addEventListener("arena_storage_synced", handleStorageSynced);
-    return () => window.removeEventListener("arena_storage_synced", handleStorageSynced);
+    return () => {
+      window.removeEventListener("arena_role_changed", handleRoleChanged);
+      window.removeEventListener("arena_storage_synced", handleStorageSynced);
+    };
   }, []);
 
   const filteredTournaments = useMemo(() => {
@@ -60,6 +90,34 @@ export default function HomePage() {
       return matchesSearch && matchesStatus;
     });
   }, [tournaments, searchQuery, statusFilter]);
+
+  const isStaff = currentUserRole === "organizer" || currentUserRole === "admin";
+
+  const handleDeleteConfirm = () => {
+    if (!tournamentToDelete) return;
+    setDeleteError("");
+    try {
+      deleteTournament(tournamentToDelete.id);
+      const deletedName = tournamentToDelete.name;
+      setTournamentToDelete(null);
+      refreshTournaments();
+      setFeedbackToast(`Tournament "${deletedName}" was deleted.`);
+      setTimeout(() => setFeedbackToast(null), 4000);
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete tournament.");
+    }
+  };
+
+  const handleStaffPasswordSuccess = (role: "organizer" | "admin", password?: string) => {
+    try {
+      setCurrentUserRole(role, password);
+      setIsStaffPasswordModalOpen(false);
+      window.dispatchEvent(new Event("arena_role_changed"));
+      router.push("/create");
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +155,13 @@ export default function HomePage() {
     <div className="min-h-screen bg-arena-bg text-arena-text pb-20">
       <Navbar />
 
+      {/* Feedback Toast */}
+      {feedbackToast && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-xl bg-arena-elevated border border-arena-accent/50 text-white text-xs font-semibold shadow-glow animate-in slide-in-from-bottom-5">
+          {feedbackToast}
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-12 pb-16 border-b border-arena-border/50">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-radial-glow pointer-events-none" />
@@ -119,13 +184,27 @@ export default function HomePage() {
 
           {/* Call to Actions */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/create"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold tracking-wide shadow-glow transition active:scale-95"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Create Tournament</span>
-            </Link>
+            {isStaff ? (
+              <Link
+                href="/create"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold tracking-wide shadow-glow transition active:scale-95"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Create Tournament</span>
+              </Link>
+            ) : (
+              <button
+                onClick={() => setIsStaffPasswordModalOpen(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-arena-elevated border border-arena-border hover:border-arena-accent text-white text-xs font-semibold tracking-wide shadow-sm transition active:scale-95"
+                title="Organizer profile required to create tournaments"
+              >
+                <Lock className="w-4 h-4 text-arena-muted" />
+                <span>Create Tournament</span>
+                <span className="px-1.5 py-0.5 text-[9px] rounded bg-arena-accent/20 text-arena-highlight uppercase font-bold">
+                  Staff Only
+                </span>
+              </button>
+            )}
 
             {tournaments.length > 0 && (
               <Link
@@ -244,13 +323,27 @@ export default function HomePage() {
                   ? "No tournaments match your current filters. Try searching for something else."
                   : "No tournaments created yet. Create your first tournament to start building brackets!"}
               </p>
-              <Link
-                href="/create"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold shadow-glow transition"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Create Tournament</span>
-              </Link>
+              {isStaff ? (
+                <Link
+                  href="/create"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold shadow-glow transition"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Create Tournament</span>
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setIsStaffPasswordModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-arena-elevated border border-arena-border hover:border-arena-accent text-white text-xs font-semibold shadow-sm transition"
+                  title="Organizer profile required to create tournaments"
+                >
+                  <Lock className="w-4 h-4 text-arena-muted" />
+                  <span>Create Tournament</span>
+                  <span className="px-1.5 py-0.5 text-[9px] rounded bg-arena-accent/20 text-arena-highlight uppercase font-bold">
+                    Staff Only
+                  </span>
+                </button>
+              )}
             </div>
           ) : (
             filteredTournaments.map((t) => (
@@ -311,6 +404,19 @@ export default function HomePage() {
                       className="px-3.5 py-2.5 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold transition shadow-glow-sm"
                     >
                       Register
+                    </button>
+                  )}
+
+                  {isStaff && t.status === "completed" && (
+                    <button
+                      onClick={() => {
+                        setDeleteError("");
+                        setTournamentToDelete(t);
+                      }}
+                      className="p-2.5 rounded-xl bg-arena-surface border border-arena-border hover:border-arena-danger/60 hover:bg-arena-danger/10 text-arena-muted hover:text-arena-danger transition"
+                      title="Delete completed tournament"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -391,6 +497,66 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Delete Completed Tournament Confirmation Modal */}
+      {tournamentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/85 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-md bg-arena-elevated border border-arena-danger/40 rounded-2xl p-6 shadow-2xl">
+            <button
+              onClick={() => setTournamentToDelete(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg bg-arena-surface border border-arena-border text-arena-muted hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-arena-danger/20 border border-arena-danger/40 flex items-center justify-center text-arena-danger">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Completed Tournament?</h3>
+                <p className="text-xs text-arena-muted">Destructive action</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-arena-muted mb-6 leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-white">{tournamentToDelete.name}</strong>? All bracket records, results, and participant logs will be permanently erased. This cannot be undone.
+            </p>
+
+            {deleteError && (
+              <p className="text-xs text-arena-danger mb-4 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{deleteError}</span>
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setTournamentToDelete(null)}
+                className="px-4 py-2 rounded-xl text-xs text-arena-muted hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                className="px-5 py-2.5 rounded-xl bg-arena-danger hover:bg-red-500 text-white text-xs font-bold transition shadow-glow-danger"
+              >
+                Delete Tournament
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Password Modal */}
+      <PasswordModal
+        isOpen={isStaffPasswordModalOpen}
+        targetRole="organizer"
+        onSuccess={handleStaffPasswordSuccess}
+        onCancel={() => setIsStaffPasswordModalOpen(false)}
+      />
     </div>
   );
 }

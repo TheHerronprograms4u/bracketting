@@ -19,13 +19,19 @@ const STORAGE_KEY_PARTICIPANTS = "arena_participants";
 const STORAGE_KEY_MATCHES = "arena_matches";
 const STORAGE_KEY_LOGS = "arena_activity_logs";
 const STORAGE_KEY_USER = "arena_current_user";
+export const STAFF_PASSWORD = "Access2026";
+export const SESSION_KEY_STAFF_AUTH = "arena_staff_authenticated";
 
-// Default Mock User
-const DEFAULT_USER: User = {
-  id: "user_organizer_arena",
-  email: "organizer@arena.gg",
-  display_name: "Organizer",
-  role: "organizer",
+export function verifyStaffPassword(password: string): boolean {
+  return password === STAFF_PASSWORD;
+}
+
+// Default Mock User (Default profile for visitors is participant)
+export const DEFAULT_USER: User = {
+  id: "user_participant_arena",
+  email: "participant@arena.gg",
+  display_name: "Participant Phoenix",
+  role: "participant",
   avatar_url: "",
   created_at: new Date().toISOString(),
 };
@@ -186,8 +192,25 @@ function pushLogToSupabase(log: ActivityLog) {
     });
 }
 
+function deleteTournamentFromSupabase(tournamentId: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  Promise.all([
+    supabase.from("matches").delete().eq("tournament_id", tournamentId),
+    supabase.from("participants").delete().eq("tournament_id", tournamentId),
+    supabase.from("activity_logs").delete().eq("tournament_id", tournamentId),
+    supabase.from("tournaments").delete().eq("id", tournamentId),
+  ]).then((results) => {
+    results.forEach(({ error }) => {
+      if (error) console.warn("Supabase tournament delete:", error.message);
+    });
+  });
+}
+
 export function initStorage(): void {
   if (!isBrowser()) return;
+
+  const isStaffAuth = window.sessionStorage.getItem(SESSION_KEY_STAFF_AUTH) === "true";
   const existing = window.localStorage.getItem(STORAGE_KEY_TOURNAMENTS);
   if (!existing) {
     const seed = getInitialSeedData();
@@ -197,6 +220,11 @@ export function initStorage(): void {
     saveToStorage(STORAGE_KEY_LOGS, seed.logs);
     saveToStorage(STORAGE_KEY_USER, DEFAULT_USER);
   } else {
+    // If not authenticated as staff in this browser session, enforce default participant profile
+    if (!isStaffAuth) {
+      saveToStorage(STORAGE_KEY_USER, DEFAULT_USER);
+      currentUserState = DEFAULT_USER;
+    }
     try {
       const parsed: Tournament[] = JSON.parse(existing);
       const isLegacyDummy = parsed.some((t) =>
@@ -225,25 +253,72 @@ export function initStorage(): void {
   }
 }
 
+export function isStaffAuthenticated(): boolean {
+  if (!isBrowser()) {
+    return currentUserState.role === "organizer" || currentUserState.role === "admin";
+  }
+  return window.sessionStorage.getItem(SESSION_KEY_STAFF_AUTH) === "true";
+}
+
 export function getCurrentUser(): User {
   if (isBrowser()) {
-    return loadFromStorage(STORAGE_KEY_USER, currentUserState);
+    const isStaffAuth = window.sessionStorage.getItem(SESSION_KEY_STAFF_AUTH) === "true";
+    const user = loadFromStorage(STORAGE_KEY_USER, DEFAULT_USER);
+    // If role is organizer or admin but this session hasn't been authorized with password, enforce participant
+    if (!isStaffAuth && user.role !== "participant") {
+      saveToStorage(STORAGE_KEY_USER, DEFAULT_USER);
+      currentUserState = DEFAULT_USER;
+      return DEFAULT_USER;
+    }
+    return user;
   }
   return currentUserState;
 }
 
-export function setCurrentUserRole(role: UserRole): User {
+export function setCurrentUserRole(role: UserRole, providedPassword?: string): User {
+  if (role === "organizer" || role === "admin") {
+    const isStaffAuth = isBrowser()
+      ? window.sessionStorage.getItem(SESSION_KEY_STAFF_AUTH) === "true"
+      : currentUserState.role === "organizer" || currentUserState.role === "admin";
+
+    if (!isStaffAuth && (!providedPassword || !verifyStaffPassword(providedPassword))) {
+      throw new Error("Password authentication required to unlock staff profile.");
+    }
+    if (isBrowser()) {
+      window.sessionStorage.setItem(SESSION_KEY_STAFF_AUTH, "true");
+    }
+  } else {
+    if (isBrowser()) {
+      window.sessionStorage.removeItem(SESSION_KEY_STAFF_AUTH);
+    }
+  }
+
   const current = getCurrentUser();
   const updated: User = {
     ...current,
     role,
-    display_name: role === "organizer" ? "Apex Organizer" : role === "admin" ? "Arena Admin" : "Competitor Phoenix",
+    display_name:
+      role === "organizer"
+        ? "Apex Organizer"
+        : role === "admin"
+        ? "Arena Admin"
+        : "Participant Phoenix",
   };
   currentUserState = updated;
   if (isBrowser()) {
     saveToStorage(STORAGE_KEY_USER, updated);
   }
   return updated;
+}
+
+export function loginAsStaff(role: "organizer" | "admin", password: string): User {
+  if (!verifyStaffPassword(password)) {
+    throw new Error("Incorrect password. Access denied.");
+  }
+  if (isBrowser()) {
+    window.sessionStorage.setItem(SESSION_KEY_STAFF_AUTH, "true");
+  }
+  return setCurrentUserRole(role, password);
 }
 
 export function getTournaments(): Tournament[] {
@@ -294,6 +369,10 @@ export function createTournament(
   data: Omit<Tournament, "id" | "organizer_id" | "status" | "champion_id" | "created_at" | "updated_at">
 ): Tournament {
   const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to create tournaments.");
+  }
+
   const newTourney: Tournament = {
     ...data,
     id: `tourney_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -325,6 +404,11 @@ export function createTournament(
 }
 
 export function updateTournament(id: string, updates: Partial<Tournament>): Tournament {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to update tournament settings.");
+  }
+
   const list = getTournaments();
   const index = list.findIndex((t) => t.id === id);
   if (index === -1) throw new Error(`Tournament ${id} not found.`);
@@ -347,6 +431,54 @@ export function updateTournament(id: string, updates: Partial<Tournament>): Tour
   return updated;
 }
 
+export function deleteTournament(id: string): void {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to delete tournaments.");
+  }
+
+  const list = getTournaments();
+  const index = list.findIndex((t) => t.id === id);
+  if (index === -1) throw new Error(`Tournament ${id} not found.`);
+
+  const tournament = list[index];
+  if (tournament.status !== "completed") {
+    throw new Error("Only completed tournaments can be deleted.");
+  }
+
+  const remainingTournaments = list.filter((t) => t.id !== id);
+
+  const allParts: Participant[] = isBrowser()
+    ? loadFromStorage(STORAGE_KEY_PARTICIPANTS, memoryStore.participants)
+    : memoryStore.participants;
+  const remainingParts = allParts.filter((p) => p.tournament_id !== id);
+
+  const allMatches: Match[] = isBrowser()
+    ? loadFromStorage(STORAGE_KEY_MATCHES, memoryStore.matches)
+    : memoryStore.matches;
+  const remainingMatches = allMatches.filter((m) => m.tournament_id !== id);
+
+  const allLogs: ActivityLog[] = isBrowser()
+    ? loadFromStorage(STORAGE_KEY_LOGS, memoryStore.logs)
+    : memoryStore.logs;
+  const remainingLogs = allLogs.filter((l) => l.tournament_id !== id);
+
+  if (isBrowser()) {
+    saveToStorage(STORAGE_KEY_TOURNAMENTS, remainingTournaments);
+    saveToStorage(STORAGE_KEY_PARTICIPANTS, remainingParts);
+    saveToStorage(STORAGE_KEY_MATCHES, remainingMatches);
+    saveToStorage(STORAGE_KEY_LOGS, remainingLogs);
+    window.dispatchEvent(new Event("arena_storage_synced"));
+  } else {
+    memoryStore.tournaments = remainingTournaments;
+    memoryStore.participants = remainingParts;
+    memoryStore.matches = remainingMatches;
+    memoryStore.logs = remainingLogs;
+  }
+
+  deleteTournamentFromSupabase(id);
+}
+
 export function addParticipant(
   tournamentId: string,
   displayName: string,
@@ -358,6 +490,16 @@ export function addParticipant(
 
   const details = getTournamentById(tournamentId);
   if (!details) throw new Error(`Tournament ${tournamentId} not found.`);
+
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    if (details.tournament.registration_status === "closed") {
+      throw new Error("Registration is closed for this tournament.");
+    }
+    if (details.tournament.status === "completed") {
+      throw new Error("Cannot register for a completed tournament.");
+    }
+  }
 
   if (details.tournament.capacity_limit && details.participants.length >= details.tournament.capacity_limit) {
     throw new Error(`Tournament is full (capacity: ${details.tournament.capacity_limit}).`);
@@ -408,6 +550,11 @@ export function addParticipant(
 }
 
 export function bulkAddParticipants(tournamentId: string, rawLines: string[]): Participant[] {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to bulk import participants.");
+  }
+
   const details = getTournamentById(tournamentId);
   if (!details) throw new Error(`Tournament ${tournamentId} not found.`);
 
@@ -474,6 +621,11 @@ export function bulkAddParticipants(tournamentId: string, rawLines: string[]): P
 }
 
 export function updateParticipantName(participantId: string, newDisplayName: string): Participant {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to rename participants.");
+  }
+
   const trimmed = newDisplayName.trim();
   if (!trimmed) throw new Error("Participant name cannot be empty.");
 
@@ -506,6 +658,11 @@ export function updateParticipantName(participantId: string, newDisplayName: str
 }
 
 export function removeParticipant(participantId: string): void {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to remove participants.");
+  }
+
   const allParts: Participant[] = isBrowser()
     ? loadFromStorage(STORAGE_KEY_PARTICIPANTS, memoryStore.participants)
     : memoryStore.participants;
@@ -531,6 +688,11 @@ export function removeParticipant(participantId: string): void {
 }
 
 export function generateTournamentBracket(tournamentId: string): TournamentDetails {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to generate brackets.");
+  }
+
   const details = getTournamentById(tournamentId);
   if (!details) throw new Error(`Tournament ${tournamentId} not found.`);
 
@@ -589,6 +751,11 @@ export function recordMatchWinner(
   scoreA: number | null = null,
   scoreB: number | null = null
 ): { details: TournamentDetails; isChampionshipWin: boolean } {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to record match results.");
+  }
+
   const details = getTournamentById(tournamentId);
   if (!details) throw new Error(`Tournament ${tournamentId} not found.`);
 
@@ -652,6 +819,11 @@ export function correctMatchResult(
   scoreA: number | null = null,
   scoreB: number | null = null
 ): TournamentDetails {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to correct match results.");
+  }
+
   const details = getTournamentById(tournamentId);
   if (!details) throw new Error(`Tournament ${tournamentId} not found.`);
 
@@ -696,6 +868,11 @@ export function correctMatchResult(
 }
 
 export function resetTournament(tournamentId: string): TournamentDetails {
+  const user = getCurrentUser();
+  if (user.role === "participant") {
+    throw new Error("Participants are not authorized to reset tournaments.");
+  }
+
   const details = getTournamentById(tournamentId);
   if (!details) throw new Error(`Tournament ${tournamentId} not found.`);
 

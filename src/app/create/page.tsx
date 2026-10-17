@@ -1,18 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createTournament } from "@/lib/storage";
+import { createTournament, getCurrentUser, setCurrentUserRole } from "@/lib/storage";
 import { Navbar } from "@/components/Navbar";
+import { PasswordModal } from "@/components/PasswordModal";
+import { UserRole } from "@/types/tournament";
 import {
   Trophy,
   ArrowLeft,
   AlertCircle,
+  Lock,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function CreateTournamentPage() {
   const router = useRouter();
+
+  const [currentUserRole, setCurrentUserRoleState] = useState<UserRole>("participant");
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -25,9 +32,39 @@ export default function CreateTournamentPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    const updateRole = () => {
+      const user = getCurrentUser();
+      setCurrentUserRoleState(user.role);
+    };
+    updateRole();
+
+    window.addEventListener("arena_role_changed", updateRole);
+    return () => window.removeEventListener("arena_role_changed", updateRole);
+  }, []);
+
+  const handlePasswordSuccess = (role: "organizer" | "admin", password?: string) => {
+    try {
+      setCurrentUserRole(role, password);
+      setCurrentUserRoleState(role);
+      setIsPasswordModalOpen(false);
+      window.dispatchEvent(new Event("arena_role_changed"));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const isStaff = currentUserRole === "organizer" || currentUserRole === "admin";
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const user = getCurrentUser();
+    if (user.role === "participant") {
+      setError("Participant profiles are not authorized to create tournaments.");
+      return;
+    }
 
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -78,29 +115,58 @@ export default function CreateTournamentPage() {
           <span>Back to Tournaments</span>
         </Link>
 
-        <div className="rounded-3xl bg-arena-card border border-arena-border p-6 md:p-10 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-arena-accent/20 border border-arena-accent flex items-center justify-center text-arena-highlight shadow-glow-sm">
-              <Trophy className="w-6 h-6" />
+        {!isStaff ? (
+          <div className="rounded-3xl bg-arena-card border border-arena-border p-8 md:p-12 shadow-sm text-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto mb-4 shadow-sm">
+              <Lock className="w-8 h-8" />
             </div>
-            <div>
-              <h1 className="text-2xl font-black text-white tracking-tight">
-                Create New Tournament
-              </h1>
-              <p className="text-xs text-arena-muted">
-                Configure your dynamic single-elimination tournament parameters.
-              </p>
+            <h1 className="text-2xl font-black text-white tracking-tight mb-2">
+              Organizer Authorization Required
+            </h1>
+            <p className="text-xs text-arena-muted max-w-md mx-auto mb-6 leading-relaxed">
+              Participant profiles are not authorized to create tournaments. Please authenticate with the staff access password (<strong className="text-arena-highlight">Access2026</strong>) to unlock Organizer or Admin mode.
+            </p>
+
+            <div className="flex items-center justify-center gap-3">
+              <Link
+                href="/"
+                className="px-5 py-2.5 rounded-xl bg-arena-surface border border-arena-border text-arena-muted hover:text-white text-xs font-semibold transition"
+              >
+                Back to Tournaments
+              </Link>
+              <button
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold shadow-glow transition"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Unlock Organizer Profile</span>
+              </button>
             </div>
           </div>
-
-          {error && (
-            <div className="p-4 rounded-xl bg-arena-danger/10 border border-arena-danger/30 text-arena-danger text-xs mb-6 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+        ) : (
+          <div className="rounded-3xl bg-arena-card border border-arena-border p-6 md:p-10 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-arena-accent/20 border border-arena-accent flex items-center justify-center text-arena-highlight shadow-glow-sm">
+                <Trophy className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-white tracking-tight">
+                  Create New Tournament
+                </h1>
+                <p className="text-xs text-arena-muted">
+                  Configure your dynamic single-elimination tournament parameters.
+                </p>
+              </div>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-4 rounded-xl bg-arena-danger/10 border border-arena-danger/30 text-arena-danger text-xs mb-6 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
             {/* Tournament Name */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-arena-muted mb-2">
@@ -310,7 +376,15 @@ export default function CreateTournamentPage() {
             </div>
           </form>
         </div>
+        )}
       </main>
+
+      <PasswordModal
+        isOpen={isPasswordModalOpen}
+        targetRole="organizer"
+        onSuccess={handlePasswordSuccess}
+        onCancel={() => setIsPasswordModalOpen(false)}
+      />
     </div>
   );
 }
