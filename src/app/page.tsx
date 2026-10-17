@@ -318,7 +318,7 @@ export default function HomePage() {
 
       {/* Quick Registration Modal */}
       {registeringTournament && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0B0F]/85 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/85 backdrop-blur-sm animate-in fade-in">
           <div className="relative w-full max-w-md bg-arena-elevated border border-arena-border rounded-2xl p-6 shadow-2xl">
             <button
               onClick={() => setRegisteringTournament(null)}

@@ -10,19 +10,26 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Calming Blues and Aquas palette tokens
+        serenity: "#B3CEE5",
+        calmSky: "#B9CBD9",
+        deepOcean: "#17496c",
+        mutedSky: "#779fba",
+
         arena: {
-          bg: "#0B0B0F",
-          surface: "#111116",
-          elevated: "#17171F",
-          card: "#14141C",
-          border: "#292932",
-          borderLight: "#363644",
-          text: "#F5F5F7",
-          muted: "#92929F",
-          accent: "#8B5CF6",
-          accentHover: "#7C3AED",
-          highlight: "#A78BFA",
-          success: "#34D399",
+          bg: "#0A141D", // Deep Oceanic Base
+          surface: "#0E1C28", // Midnight Ocean Surface
+          elevated: "#17496C", // Deep Ocean Blue
+          card: "#122434", // Oceanic Card
+          border: "#22445E", // Soft Ocean Border
+          borderLight: "#325E80", // Ocean Border Light / Hover
+          text: "#F0F5F9", // Crisp Clean Ocean White
+          muted: "#B9CBD9", // Calm Sky Blue (Secondary Text)
+          accent: "#779fba", // Muted Sky Accent (Primary Actions/Buttons)
+          accentHover: "#628ca9", // Interactive Hover
+          highlight: "#B3CEE5", // Serenity / Soft Blue (Highlights & Glow)
+          deep: "#17496c", // Deep Ocean Blue
+          success: "#38BDF8", // Calming Aqua / Sky Success
           danger: "#F87171",
         },
       },
@@ -37,10 +44,11 @@ const config: Config = {
         ],
       },
       boxShadow: {
-        glow: "0 0 35px -5px rgba(139, 92, 246, 0.3)",
-        "glow-sm": "0 0 15px -3px rgba(139, 92, 246, 0.25)",
+        glow: "0 0 35px -5px rgba(119, 159, 186, 0.35)",
+        "glow-sm": "0 0 15px -3px rgba(179, 206, 229, 0.3)",
+        "glow-ocean": "0 0 30px -5px rgba(23, 73, 108, 0.5)",
         "glow-danger": "0 0 30px -5px rgba(248, 113, 113, 0.3)",
-        "glow-success": "0 0 30px -5px rgba(52, 211, 153, 0.3)",
+        "glow-success": "0 0 30px -5px rgba(56, 189, 248, 0.3)",
       },
       keyframes: {
         shiver: {

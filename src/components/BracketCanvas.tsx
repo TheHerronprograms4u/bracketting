@@ -310,7 +310,7 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
                 key={c.id}
                 d={c.path}
                 fill="none"
-                stroke={c.isActive ? "#8B5CF6" : "#292932"}
+                stroke={c.isActive ? "#B3CEE5" : "#22445E"}
                 strokeWidth={c.isActive ? 2.5 : 1.5}
                 className="transition-colors duration-300"
               />

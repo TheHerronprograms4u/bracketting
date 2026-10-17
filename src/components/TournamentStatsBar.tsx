@@ -198,7 +198,7 @@ export const TournamentStatsBar: React.FC<TournamentStatsBarProps> = ({
 
       {/* Reset Confirmation Modal */}
       {isResetConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0B0F]/85 backdrop-blur-sm animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/85 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="relative w-full max-w-md bg-arena-elevated border border-arena-danger/40 rounded-2xl p-6 shadow-2xl">
             <button
               onClick={() => setIsResetConfirmOpen(false)}
@@ -246,7 +246,7 @@ export const TournamentStatsBar: React.FC<TournamentStatsBarProps> = ({
 
       {/* Activity Log Stream Modal */}
       {isActivityModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0B0F]/85 backdrop-blur-sm animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/85 backdrop-blur-sm animate-in fade-in duration-150">
           <div className="relative w-full max-w-lg bg-arena-elevated border border-arena-border rounded-2xl p-6 shadow-2xl">
             <button
               onClick={() => setIsActivityModalOpen(false)}

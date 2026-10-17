@@ -3,8 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --background: #0B0B0F;
-  --foreground: #F5F5F7;
+  --background: #0A141D;
+  --foreground: #F0F5F9;
+  --serenity: #B3CEE5;
+  --calm-sky: #B9CBD9;
+  --deep-ocean: #17496c;
+  --muted-sky: #779fba;
 }
 
 body {
@@ -22,16 +26,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B0B0F;
+  background: #0A141D;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #292932;
+  background: #17496C;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #363644;
+  background: #325E80;
 }
 
 /* Utility classes */
@@ -41,6 +45,6 @@ body {
   }
 
   .bg-radial-glow {
-    background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+    background: radial-gradient(circle at 50% 0%, rgba(119, 159, 186, 0.16) 0%, transparent 70%);
   }
 }

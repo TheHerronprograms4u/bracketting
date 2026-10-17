@@ -63,7 +63,7 @@ export const ResultCorrectionModal: React.FC<ResultCorrectionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0B0F]/85 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/85 backdrop-blur-sm animate-in fade-in duration-150">
       <div className="relative w-full max-w-lg bg-arena-elevated border border-amber-500/40 rounded-2xl p-6 shadow-2xl">
         <button
           onClick={onCancel}

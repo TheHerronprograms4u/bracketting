@@ -25,13 +25,13 @@ export const ChampionshipFinale: React.FC<ChampionshipFinaleProps> = ({
 }) => {
   useEffect(() => {
     if (isOpen) {
-      // Elegant gold & purple celebratory confetti burst
+      // Elegant oceanic gold & blue celebratory confetti burst
       try {
         confetti({
           particleCount: 100,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ["#8B5CF6", "#A78BFA", "#F59E0B", "#34D399", "#F5F5F7"],
+          colors: ["#B3CEE5", "#B9CBD9", "#779fba", "#17496c", "#F0F5F9", "#F59E0B"],
         });
 
         const timer = setTimeout(() => {
@@ -40,14 +40,14 @@ export const ChampionshipFinale: React.FC<ChampionshipFinaleProps> = ({
             angle: 60,
             spread: 55,
             origin: { x: 0 },
-            colors: ["#8B5CF6", "#F59E0B"],
+            colors: ["#B3CEE5", "#779fba", "#F59E0B"],
           });
           confetti({
             particleCount: 60,
             angle: 120,
             spread: 55,
             origin: { x: 1 },
-            colors: ["#A78BFA", "#F59E0B"],
+            colors: ["#B9CBD9", "#17496c", "#F59E0B"],
           });
         }, 400);
 
@@ -103,7 +103,7 @@ export const ChampionshipFinale: React.FC<ChampionshipFinaleProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0B0F]/90 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/90 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -325,7 +325,7 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
 
       {/* Single Add Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0B0F]/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/80 backdrop-blur-sm">
           <div className="relative w-full max-w-md bg-arena-elevated border border-arena-border rounded-2xl p-6 shadow-2xl">
             <button
               onClick={() => setIsAddModalOpen(false)}
@@ -382,7 +382,7 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
 
       {/* Bulk Add Modal */}
       {isBulkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0B0F]/85 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-arena-bg/85 backdrop-blur-sm">
           <div className="relative w-full max-w-lg bg-arena-elevated border border-arena-border rounded-2xl p-6 shadow-2xl">
             <button
               onClick={() => setIsBulkModalOpen(false)}

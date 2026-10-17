@@ -54,10 +54,11 @@ export const EliminationCinematic: React.FC<EliminationCinematicProps> = ({
       "#F87171", // danger red
       "#EF4444",
       "#B91C1C",
-      "#8B5CF6", // purple glitch
+      "#779fba", // muted sky glitch
+      "#B3CEE5", // serenity glitch
       "#4B5563",
       "#9CA3AF",
-      "#F5F5F7",
+      "#F0F5F9",
     ];
 
     const clipPaths = [
@@ -137,7 +138,7 @@ export const EliminationCinematic: React.FC<EliminationCinematicProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0B0F]/95 backdrop-blur-xl overflow-hidden select-none"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-arena-bg/95 backdrop-blur-xl overflow-hidden select-none"
       >
         {/* Ambient Pulsing Background Glow */}
         <div className="absolute inset-0 bg-radial-glow pointer-events-none opacity-80" />
