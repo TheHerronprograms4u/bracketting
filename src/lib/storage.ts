@@ -406,7 +406,8 @@ export function generateTournamentBracket(tournamentId: string): TournamentDetai
   const { matches: newMatches, participants: updatedParticipants } = generateBracket(
     tournamentId,
     details.participants,
-    details.tournament.seeding_method
+    details.tournament.seeding_method,
+    details.tournament.format
   );
 
   // Update matches

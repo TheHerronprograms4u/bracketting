@@ -16,6 +16,7 @@ export default function CreateTournamentPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [format, setFormat] = useState<"single_elimination" | "double_elimination">("single_elimination");
   const [participantType, setParticipantType] = useState<"individual" | "team">("team");
   const [capacityLimit, setCapacityLimit] = useState<string>("");
   const [seedingMethod, setSeedingMethod] = useState<"seeded" | "random" | "manual">("seeded");
@@ -49,7 +50,7 @@ export default function CreateTournamentPage() {
       const newTourney = createTournament({
         name: trimmedName,
         description: description.trim(),
-        format: "single_elimination",
+        format,
         participant_type: participantType,
         capacity_limit: parsedCapacity,
         registration_status: registrationStatus,
@@ -127,6 +128,49 @@ export default function CreateTournamentPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl bg-arena-surface border border-arena-border focus:border-arena-accent text-white text-sm outline-none transition"
               />
+            </div>
+
+            {/* Tournament Format */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-arena-muted mb-2">
+                Tournament Elimination Format
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormat("single_elimination")}
+                  className={`flex flex-col p-3.5 rounded-xl border text-left transition ${
+                    format === "single_elimination"
+                      ? "bg-arena-accent/20 border-arena-accent text-white"
+                      : "bg-arena-surface border-arena-border text-arena-muted hover:border-arena-borderLight hover:text-white"
+                  }`}
+                >
+                  <span className="text-xs font-bold">Single Elimination</span>
+                  <span className="text-[11px] text-arena-muted mt-1 leading-relaxed">
+                    Standard knockout. One loss eliminates a competitor. Fastest route to 1 champion.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormat("double_elimination")}
+                  className={`flex flex-col p-3.5 rounded-xl border text-left transition ${
+                    format === "double_elimination"
+                      ? "bg-arena-accent/20 border-arena-accent text-white"
+                      : "bg-arena-surface border-arena-border text-arena-muted hover:border-arena-borderLight hover:text-white"
+                  }`}
+                >
+                  <span className="text-xs font-bold flex items-center justify-between">
+                    <span>Double Elimination</span>
+                    <span className="text-[10px] text-arena-highlight uppercase font-extrabold px-1.5 py-0.5 rounded bg-arena-accent/30 border border-arena-accent/40">
+                      Losers Bracket
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-arena-muted mt-1 leading-relaxed">
+                    Winners & Losers brackets. Competitors get a second chance before elimination.
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Competitor Type */}

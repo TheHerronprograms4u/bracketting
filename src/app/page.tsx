@@ -277,13 +277,15 @@ export default function HomePage() {
                 </h3>
 
                 <p className="text-xs text-arena-muted line-clamp-2 mb-6">
-                  {t.description || "Single elimination tournament."}
+                  {t.description || (t.format === "double_elimination" ? "Double elimination tournament." : "Single elimination tournament.")}
                 </p>
               </div>
 
               <div>
                 <div className="flex items-center justify-between text-xs py-3 border-t border-arena-border/50 text-arena-muted mb-4">
-                  <span>Format: Single Elimination</span>
+                  <span>
+                    Format: {t.format === "double_elimination" ? "Double Elimination" : "Single Elimination"}
+                  </span>
                   <span>
                     Cap: {t.capacity_limit ? `${t.capacity_limit} max` : "Unlimited"}
                   </span>

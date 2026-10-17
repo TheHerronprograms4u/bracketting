@@ -231,3 +231,98 @@ describe("Bracket Engine - Result Correction & Downstream Invalidation", () => {
     expect(updatedFinal.participant_b_id).toBe(m1.participant_b_id);
   });
 });
+
+describe("Bracket Engine - Double Elimination & Losers Bracket", () => {
+  it("generates winners, losers, and grand finals matches for 4 participants", () => {
+    const participants = createMockParticipants(4);
+    const result = generateBracket("de_test_4", participants, "seeded", "double_elimination");
+
+    const winnersMatches = result.matches.filter((m) => m.bracket_type === "winners");
+    const losersMatches = result.matches.filter((m) => m.bracket_type === "losers");
+    const grandFinals = result.matches.filter((m) => m.bracket_type === "grand_finals");
+
+    expect(winnersMatches.length).toBe(3); // 2 in R1, 1 in R2 (Winners Final)
+    expect(losersMatches.length).toBe(2); // 1 in L1, 1 in L2 (Losers Final)
+    expect(grandFinals.length).toBe(1);
+
+    // Check routing: W R1 losers route to L R1
+    const wR1M0 = winnersMatches.find((m) => m.round_number === 1 && m.match_position === 0)!;
+    const wR1M1 = winnersMatches.find((m) => m.round_number === 1 && m.match_position === 1)!;
+    const lR1M0 = losersMatches.find((m) => m.round_number === 1 && m.match_position === 0)!;
+
+    expect(wR1M0.loser_next_match_id).toBe(lR1M0.id);
+    expect(wR1M0.loser_next_match_slot).toBe("participant_a");
+    expect(wR1M1.loser_next_match_id).toBe(lR1M0.id);
+    expect(wR1M1.loser_next_match_slot).toBe("participant_b");
+
+    // Loser of Winners Final (W R2) drops to Losers Final (L R2)
+    const wFinal = winnersMatches.find((m) => m.round_number === 2)!;
+    const lFinal = losersMatches.find((m) => m.round_number === 2)!;
+    expect(wFinal.loser_next_match_id).toBe(lFinal.id);
+    expect(wFinal.loser_next_match_slot).toBe("participant_b");
+
+    // Winners Final winner advances to Grand Finals slot A
+    const gf = grandFinals[0];
+    expect(wFinal.next_match_id).toBe(gf.id);
+    expect(wFinal.next_match_slot).toBe("participant_a");
+
+    // Losers Final winner advances to Grand Finals slot B
+    expect(lFinal.next_match_id).toBe(gf.id);
+    expect(lFinal.next_match_slot).toBe("participant_b");
+  });
+
+  it("routes defeated participants to losers bracket and progresses to grand finals", () => {
+    const participants = createMockParticipants(4);
+    const { matches } = generateBracket("de_play_4", participants, "seeded", "double_elimination");
+
+    const p1 = participants[0]; // seed 1
+    const p2 = participants[1]; // seed 2
+    const p3 = participants[2]; // seed 3
+    const p4 = participants[3]; // seed 4
+
+    const wR1 = matches.filter((m) => m.bracket_type === "winners" && m.round_number === 1);
+    const m0 = wR1[0]; // p1 vs p4
+    const m1 = wR1[1]; // p2 vs p3
+
+    // P1 beats P4 -> P4 drops to losers R1 slot A
+    let state = advanceMatchWinner(matches, m0.id, p1.id, 2, 0).updatedMatches;
+    let lR1 = state.find((m) => m.bracket_type === "losers" && m.round_number === 1)!;
+    expect(lR1.participant_a_id).toBe(p4.id);
+
+    // P2 beats P3 -> P3 drops to losers R1 slot B
+    state = advanceMatchWinner(state, m1.id, p2.id, 2, 0).updatedMatches;
+    lR1 = state.find((m) => m.bracket_type === "losers" && m.round_number === 1)!;
+    expect(lR1.participant_b_id).toBe(p3.id);
+    expect(lR1.status).toBe("ready");
+
+    // Play Winners Final: P1 beats P2 -> P2 drops to losers final slot B; P1 advances to Grand Finals slot A
+    const wFinal = state.find((m) => m.bracket_type === "winners" && m.round_number === 2)!;
+    state = advanceMatchWinner(state, wFinal.id, p1.id, 2, 1).updatedMatches;
+
+    const gf = state.find((m) => m.bracket_type === "grand_finals")!;
+    expect(gf.participant_a_id).toBe(p1.id);
+
+    // Play Losers Round 1: P3 beats P4 -> P3 advances to Losers Final slot A
+    state = advanceMatchWinner(state, lR1.id, p3.id, 2, 0).updatedMatches;
+    const lFinal = state.find((m) => m.bracket_type === "losers" && m.round_number === 2)!;
+    expect(lFinal.participant_a_id).toBe(p3.id);
+    expect(lFinal.participant_b_id).toBe(p2.id); // P2 was dropped from Winners Final
+    expect(lFinal.status).toBe("ready");
+
+    // Play Losers Final: P2 beats P3 -> P2 advances to Grand Finals slot B
+    state = advanceMatchWinner(state, lFinal.id, p2.id, 2, 1).updatedMatches;
+    const gfReady = state.find((m) => m.bracket_type === "grand_finals")!;
+    expect(gfReady.participant_a_id).toBe(p1.id);
+    expect(gfReady.participant_b_id).toBe(p2.id);
+    expect(gfReady.status).toBe("ready");
+
+    // Play Grand Finals: P1 beats P2 for championship
+    const finalOutcome = advanceMatchWinner(state, gfReady.id, p1.id, 3, 2);
+    expect(finalOutcome.isChampionshipWin).toBe(true);
+
+    const completedGf = finalOutcome.updatedMatches.find((m) => m.bracket_type === "grand_finals")!;
+    expect(completedGf.status).toBe("completed");
+    expect(completedGf.winner_id).toBe(p1.id);
+  });
+});
+

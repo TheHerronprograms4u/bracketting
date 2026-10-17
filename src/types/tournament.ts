@@ -22,12 +22,14 @@ export type ParticipantType = "individual" | "team";
 
 export type SeedingMethod = "random" | "seeded" | "manual";
 
+export type TournamentFormat = "single_elimination" | "double_elimination";
+
 export interface Tournament {
   id: string;
   organizer_id: string;
   name: string;
   description: string;
-  format: "single_elimination";
+  format: TournamentFormat;
   participant_type: ParticipantType;
   capacity_limit: number | null;
   registration_status: "open" | "closed";
@@ -59,9 +61,12 @@ export type MatchStatus = "pending" | "ready" | "in_progress" | "completed" | "b
 
 export type MatchSlot = "participant_a" | "participant_b";
 
+export type BracketBranch = "winners" | "losers" | "grand_finals";
+
 export interface Match {
   id: string;
   tournament_id: string;
+  bracket_type?: BracketBranch;
   round_number: number; // 1-indexed (1, 2, ..., R)
   match_position: number; // 0-indexed position in that round
   participant_a_id: string | null;
@@ -69,6 +74,8 @@ export interface Match {
   winner_id: string | null;
   next_match_id: string | null;
   next_match_slot: MatchSlot | null;
+  loser_next_match_id?: string | null;
+  loser_next_match_slot?: MatchSlot | null;
   status: MatchStatus;
   score_a: number | null;
   score_b: number | null;

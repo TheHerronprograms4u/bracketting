@@ -149,7 +149,7 @@ export const ChampionshipFinale: React.FC<ChampionshipFinaleProps> = ({
             <div className="p-3 rounded-xl bg-arena-surface border border-arena-border">
               <div className="text-[10px] uppercase font-bold text-arena-muted">Format</div>
               <div className="text-xs font-semibold text-arena-text capitalize mt-0.5">
-                Single Elim
+                {tournament.format === "double_elimination" ? "Double Elim" : "Single Elim"}
               </div>
             </div>
             <div className="p-3 rounded-xl bg-arena-surface border border-arena-border">

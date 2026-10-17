@@ -307,7 +307,11 @@ export default function TournamentDetailPage() {
             <div className="space-y-2 max-w-2xl">
               <div className="flex items-center gap-2 text-xs font-bold text-arena-highlight uppercase tracking-widest">
                 <Shield className="w-3.5 h-3.5" />
-                <span>Single Elimination Championship</span>
+                <span>
+                  {tournament.format === "double_elimination"
+                    ? "Double Elimination Championship"
+                    : "Single Elimination Championship"}
+                </span>
               </div>
               <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
                 {tournament.name}
@@ -386,6 +390,7 @@ export default function TournamentDetailPage() {
             hasScoring={tournament.has_scoring}
             currentUserRole={currentUserRole}
             champion={champion}
+            format={tournament.format}
             onSelectWinner={handleSelectWinner}
             onCorrectResult={handleCorrectResultTrigger}
             onRenameParticipant={handleRename}
