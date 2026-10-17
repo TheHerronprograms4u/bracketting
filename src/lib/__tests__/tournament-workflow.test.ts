@@ -3,7 +3,6 @@ import {
   generateBracket,
   advanceMatchWinner,
   calculateTournamentStats,
-  correctMatchWinner,
 } from "../bracket-engine";
 import { Participant } from "@/types/tournament";
 
