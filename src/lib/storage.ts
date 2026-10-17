@@ -12,6 +12,7 @@ import {
   advanceMatchWinner,
   correctMatchWinner as engineCorrectMatchWinner,
 } from "./bracket-engine";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabase";
 
 const STORAGE_KEY_TOURNAMENTS = "arena_tournaments";
 const STORAGE_KEY_PARTICIPANTS = "arena_participants";
@@ -72,6 +73,119 @@ function saveToStorage<T>(key: string, data: T): void {
   }
 }
 
+let isSyncing = false;
+let hasSynced = false;
+
+export async function syncFromSupabase(): Promise<void> {
+  const supabase = getSupabaseClient();
+  if (!supabase || !isBrowser() || isSyncing) return;
+
+  isSyncing = true;
+  try {
+    const [tRes, pRes, mRes, lRes] = await Promise.all([
+      supabase.from("tournaments").select("*"),
+      supabase.from("participants").select("*"),
+      supabase.from("matches").select("*"),
+      supabase.from("activity_logs").select("*").order("timestamp", { ascending: false }),
+    ]);
+
+    let hadUpdates = false;
+
+    if (tRes.data && tRes.data.length > 0) {
+      saveToStorage(STORAGE_KEY_TOURNAMENTS, tRes.data);
+      hadUpdates = true;
+    }
+    if (pRes.data && pRes.data.length > 0) {
+      saveToStorage(STORAGE_KEY_PARTICIPANTS, pRes.data);
+      hadUpdates = true;
+    }
+    if (mRes.data && mRes.data.length > 0) {
+      saveToStorage(STORAGE_KEY_MATCHES, mRes.data);
+      hadUpdates = true;
+    }
+    if (lRes.data && lRes.data.length > 0) {
+      saveToStorage(STORAGE_KEY_LOGS, lRes.data);
+      hadUpdates = true;
+    }
+
+    if (hadUpdates) {
+      window.dispatchEvent(new Event("arena_storage_synced"));
+    }
+  } catch (err) {
+    console.warn("Supabase background sync failed, operating in local storage mode:", err);
+  } finally {
+    isSyncing = false;
+  }
+}
+
+function pushTournamentToSupabase(tournament: Tournament) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  supabase
+    .from("tournaments")
+    .upsert(tournament)
+    .then(({ error }) => {
+      if (error) console.warn("Supabase tournament upsert:", error.message);
+    });
+}
+
+function pushParticipantsToSupabase(participants: Participant[]) {
+  const supabase = getSupabaseClient();
+  if (!supabase || participants.length === 0) return;
+  supabase
+    .from("participants")
+    .upsert(participants)
+    .then(({ error }) => {
+      if (error) console.warn("Supabase participants upsert:", error.message);
+    });
+}
+
+function deleteParticipantFromSupabase(participantId: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  supabase
+    .from("participants")
+    .delete()
+    .eq("id", participantId)
+    .then(({ error }) => {
+      if (error) console.warn("Supabase participant delete:", error.message);
+    });
+}
+
+function pushMatchesToSupabase(matches: Match[]) {
+  const supabase = getSupabaseClient();
+  if (!supabase || matches.length === 0) return;
+  supabase
+    .from("matches")
+    .upsert(matches)
+    .then(({ error }) => {
+      if (error) console.warn("Supabase matches upsert:", error.message);
+    });
+}
+
+function deleteMatchesFromSupabase(tournamentId: string) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  supabase
+    .from("matches")
+    .delete()
+    .eq("tournament_id", tournamentId)
+    .then(({ error }) => {
+      if (error) console.warn("Supabase matches delete:", error.message);
+    });
+}
+
+function pushLogToSupabase(log: ActivityLog) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  supabase
+    .from("activity_logs")
+    .insert(log)
+    .then(({ error }) => {
+      if (error) console.warn("Supabase activity_logs insert:", error.message);
+    });
+}
+
 export function initStorage(): void {
   if (!isBrowser()) return;
   const existing = window.localStorage.getItem(STORAGE_KEY_TOURNAMENTS);
@@ -102,6 +216,12 @@ export function initStorage(): void {
     } catch {
       // ignore
     }
+  }
+
+  // Auto sync cloud data if Supabase credentials are configured
+  if (isSupabaseConfigured() && !hasSynced) {
+    hasSynced = true;
+    syncFromSupabase();
   }
 }
 
@@ -199,6 +319,8 @@ export function createTournament(
     `Tournament "${newTourney.name}" created by ${user.display_name}.`
   );
 
+  pushTournamentToSupabase(newTourney);
+
   return newTourney;
 }
 
@@ -221,6 +343,7 @@ export function updateTournament(id: string, updates: Partial<Tournament>): Tour
   }
 
   logActivity(id, "Tournament Updated", `Settings updated for "${updated.name}".`);
+  pushTournamentToSupabase(updated);
   return updated;
 }
 
@@ -278,6 +401,8 @@ export function addParticipant(
     "Participant Registered",
     `${newParticipant.display_name} registered (Seed #${newParticipant.seed}).`
   );
+
+  pushParticipantsToSupabase([newParticipant]);
 
   return newParticipant;
 }
@@ -343,6 +468,8 @@ export function bulkAddParticipants(tournamentId: string, rawLines: string[]): P
     `Added ${createdParticipants.length} participants via bulk entry.`
   );
 
+  pushParticipantsToSupabase(createdParticipants);
+
   return createdParticipants;
 }
 
@@ -373,6 +500,8 @@ export function updateParticipantName(participantId: string, newDisplayName: str
     `Renamed "${oldName}" to "${trimmed}". Identity & match connections preserved.`
   );
 
+  pushParticipantsToSupabase([allParts[index]]);
+
   return allParts[index];
 }
 
@@ -397,6 +526,8 @@ export function removeParticipant(participantId: string): void {
     "Participant Removed",
     `Removed "${target.display_name}" from tournament.`
   );
+
+  deleteParticipantFromSupabase(participantId);
 }
 
 export function generateTournamentBracket(tournamentId: string): TournamentDetails {
@@ -445,6 +576,9 @@ export function generateTournamentBracket(tournamentId: string): TournamentDetai
     `Bracket generated for ${updatedParticipants.length} participants.`
   );
 
+  pushMatchesToSupabase(newMatches);
+  pushParticipantsToSupabase(updatedParticipants);
+
   return getTournamentById(tournamentId)!;
 }
 
@@ -478,6 +612,8 @@ export function recordMatchWinner(
   } else {
     memoryStore.matches = updatedAllMatches;
   }
+
+  pushMatchesToSupabase(tournamentMatches);
 
   const winner = details.participants.find((p) => p.id === winnerId);
   const match = details.matches.find((m) => m.id === matchId);
@@ -547,6 +683,8 @@ export function correctMatchResult(
     memoryStore.matches = updatedAllMatches;
   }
 
+  pushMatchesToSupabase(updatedMatches);
+
   const winner = details.participants.find((p) => p.id === newWinnerId);
   logActivity(
     tournamentId,
@@ -578,6 +716,8 @@ export function resetTournament(tournamentId: string): TournamentDetails {
   } else {
     memoryStore.matches = remainingMatches;
   }
+
+  deleteMatchesFromSupabase(tournamentId);
 
   logActivity(
     tournamentId,
@@ -613,4 +753,6 @@ export function logActivity(
   } else {
     memoryStore.logs = updatedLogs;
   }
+
+  pushLogToSupabase(newLog);
 }

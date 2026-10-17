@@ -93,8 +93,16 @@ export default function TournamentDetailPage() {
       setCurrentUserRole(user.role);
     };
 
+    const handleStorageSynced = () => {
+      loadData();
+    };
+
     window.addEventListener("arena_role_changed", handleRoleChanged);
-    return () => window.removeEventListener("arena_role_changed", handleRoleChanged);
+    window.addEventListener("arena_storage_synced", handleStorageSynced);
+    return () => {
+      window.removeEventListener("arena_role_changed", handleRoleChanged);
+      window.removeEventListener("arena_storage_synced", handleStorageSynced);
+    };
   }, [loadData]);
 
   if (!details) {

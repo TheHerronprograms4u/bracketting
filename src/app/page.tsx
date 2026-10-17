@@ -43,6 +43,11 @@ export default function HomePage() {
 
   useEffect(() => {
     refreshTournaments();
+    const handleStorageSynced = () => {
+      refreshTournaments();
+    };
+    window.addEventListener("arena_storage_synced", handleStorageSynced);
+    return () => window.removeEventListener("arena_storage_synced", handleStorageSynced);
   }, []);
 
   const filteredTournaments = useMemo(() => {
