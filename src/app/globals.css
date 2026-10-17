@@ -45,6 +45,6 @@ body {
   }
 
   .bg-radial-glow {
-    background: radial-gradient(circle at 50% 0%, rgba(119, 159, 186, 0.16) 0%, transparent 70%);
+    background: radial-gradient(ellipse 65% 55% at 50% 50%, rgba(119, 159, 186, 0.22) 0%, rgba(23, 73, 108, 0.08) 50%, transparent 75%);
   }
 }

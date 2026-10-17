@@ -164,16 +164,18 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-12 pb-16 border-b border-arena-border/50">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-radial-glow pointer-events-none" />
+        {/* Seamless Ambient Lighting Centered on Headline */}
+        <div className="absolute top-6 sm:top-10 left-1/2 -translate-x-1/2 w-[900px] max-w-full h-[450px] bg-radial-glow pointer-events-none blur-2xl opacity-90" />
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 w-[550px] max-w-full h-[220px] bg-arena-highlight/15 rounded-full blur-[80px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-arena-accent/15 border border-arena-accent/30 text-arena-highlight text-xs font-bold uppercase tracking-widest mb-6">
-            <Zap className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-arena-accent/10 border border-arena-accent/25 backdrop-blur-md text-arena-highlight text-xs font-bold uppercase tracking-widest mb-6 shadow-sm">
+            <Zap className="w-3.5 h-3.5 text-arena-accent" />
             <span>Dynamic Bracketing Platform</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight mb-4">
-            EVERY MATCH <span className="text-arena-highlight">MATTERS.</span>
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-[0_0_35px_rgba(179,206,229,0.22)]">
+            EVERY MATCH <span className="text-arena-highlight drop-shadow-[0_0_25px_rgba(119,159,186,0.4)]">MATTERS.</span>
           </h1>
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-arena-muted mb-8 leading-relaxed">
