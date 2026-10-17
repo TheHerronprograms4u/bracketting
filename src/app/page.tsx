@@ -10,6 +10,7 @@ import {
 import { Tournament } from "@/types/tournament";
 import { Navbar } from "@/components/Navbar";
 import {
+  Trophy,
   Users,
   Layers,
   Search,
@@ -121,13 +122,15 @@ export default function HomePage() {
               <span>Create Tournament</span>
             </Link>
 
-            <Link
-              href="/tournament/tourney_apex_cyber_clash"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-arena-elevated border border-arena-border hover:border-arena-borderLight text-white text-xs font-semibold transition"
-            >
-              <span>Explore Demo (7 Teams)</span>
-              <ArrowRight className="w-4 h-4 text-arena-muted" />
-            </Link>
+            {tournaments.length > 0 && (
+              <Link
+                href={`/tournament/${tournaments[0].id}`}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-arena-elevated border border-arena-border hover:border-arena-borderLight text-white text-xs font-semibold transition"
+              >
+                <span>Latest Tournament</span>
+                <ArrowRight className="w-4 h-4 text-arena-muted" />
+              </Link>
+            )}
           </div>
 
           {/* Key Platform Highlights */}
@@ -225,11 +228,31 @@ export default function HomePage() {
 
         {/* Tournaments Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTournaments.map((t) => (
-            <div
-              key={t.id}
-              className="flex flex-col justify-between rounded-2xl bg-arena-card border border-arena-border hover:border-arena-borderLight p-6 transition duration-200 shadow-sm group"
-            >
+          {filteredTournaments.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center p-16 rounded-3xl bg-arena-card border border-arena-border text-center">
+              <div className="w-16 h-16 rounded-2xl bg-arena-surface border border-arena-border flex items-center justify-center text-arena-muted mb-4 shadow-sm">
+                <Trophy className="w-8 h-8 text-arena-accent" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">No Tournaments Found</h3>
+              <p className="text-xs text-arena-muted max-w-sm mb-6">
+                {searchQuery || statusFilter !== "all"
+                  ? "No tournaments match your current filters. Try searching for something else."
+                  : "No tournaments created yet. Create your first tournament to start building brackets!"}
+              </p>
+              <Link
+                href="/create"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold shadow-glow transition"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Create Tournament</span>
+              </Link>
+            </div>
+          ) : (
+            filteredTournaments.map((t) => (
+              <div
+                key={t.id}
+                className="flex flex-col justify-between rounded-2xl bg-arena-card border border-arena-border hover:border-arena-borderLight p-6 transition duration-200 shadow-sm group"
+              >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span
@@ -286,8 +309,9 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          ))
+        )}
+      </div>
       </section>
 
       {/* Quick Registration Modal */}

@@ -23,179 +23,24 @@ const STORAGE_KEY_USER = "arena_current_user";
 const DEFAULT_USER: User = {
   id: "user_organizer_arena",
   email: "organizer@arena.gg",
-  display_name: "Apex Organizer",
+  display_name: "Organizer",
   role: "organizer",
   avatar_url: "",
   created_at: new Date().toISOString(),
 };
 
-// Realistic Initial Seed Data
-function getInitialSeedData() {
-  const t1Id = "tourney_apex_cyber_clash";
-  const t2Id = "tourney_nexus_invitational";
-  const t3Id = "tourney_titan_masters";
-
-  const tournaments: Tournament[] = [
-    {
-      id: t1Id,
-      organizer_id: DEFAULT_USER.id,
-      name: "APEX CYBER CLASH",
-      description:
-        "The premier regional esports showdown featuring 7 elite combat teams competing for digital supremacy.",
-      format: "single_elimination",
-      participant_type: "team",
-      capacity_limit: 8,
-      registration_status: "closed",
-      status: "in_progress",
-      seeding_method: "seeded",
-      has_scoring: true,
-      champion_id: null,
-      banner_url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80",
-      created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: t2Id,
-      organizer_id: DEFAULT_USER.id,
-      name: "NEXUS INVITATIONAL",
-      description:
-        "High-stakes 1v1 tactical fighting tournament with 13 registered contenders and a 16-slot dynamic bracket.",
-      format: "single_elimination",
-      participant_type: "individual",
-      capacity_limit: 16,
-      registration_status: "open",
-      status: "registration_open",
-      seeding_method: "seeded",
-      has_scoring: true,
-      champion_id: null,
-      banner_url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80",
-      created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: t3Id,
-      organizer_id: DEFAULT_USER.id,
-      name: "TITAN MASTERS 2026",
-      description:
-        "Special 5-team championship bracket showcasing the dynamic single-elimination generator with automatic bye progression.",
-      format: "single_elimination",
-      participant_type: "team",
-      capacity_limit: null,
-      registration_status: "closed",
-      status: "ready",
-      seeding_method: "seeded",
-      has_scoring: true,
-      champion_id: null,
-      banner_url: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=1200&q=80",
-      created_at: new Date(Date.now() - 3600000 * 6).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ];
-
-  // Participants for Tournament 1 (7 Teams from prompt: Team Alpha, Team Omega, Team Nova, Team Eclipse, Team Phantom, Team Vortex, Team Titan)
-  const t1TeamNames = [
-    "Team Alpha",
-    "Team Omega",
-    "Team Nova",
-    "Team Eclipse",
-    "Team Phantom",
-    "Team Vortex",
-    "Team Titan",
-  ];
-  const participantsT1: Participant[] = t1TeamNames.map((name, i) => ({
-    id: `part_t1_${i + 1}`,
-    tournament_id: t1Id,
-    user_id: null,
-    display_name: name,
-    participant_type: "team",
-    seed: i + 1,
-    registration_status: "confirmed",
-    created_at: new Date(Date.now() - 3600000 * 20 + i * 1000).toISOString(),
-    updated_at: new Date().toISOString(),
-  }));
-
-  // Participants for Tournament 2 (13 solo players)
-  const t2PlayerNames = [
-    "ViperZero",
-    "CyberGhost",
-    "Khaos",
-    "ShadowPulse",
-    "RogueWave",
-    "NexusPrime",
-    "IronClad",
-    "QuantumShift",
-    "BlazeFang",
-    "Zenith",
-    "FrostBite",
-    "EchoStrike",
-    "ApexHunter",
-  ];
-  const participantsT2: Participant[] = t2PlayerNames.map((name, i) => ({
-    id: `part_t2_${i + 1}`,
-    tournament_id: t2Id,
-    user_id: null,
-    display_name: name,
-    participant_type: "individual",
-    seed: i + 1,
-    registration_status: "confirmed",
-    created_at: new Date(Date.now() - 3600000 * 10 + i * 1000).toISOString(),
-    updated_at: new Date().toISOString(),
-  }));
-
-  // Participants for Tournament 3 (5 teams)
-  const t3TeamNames = [
-    "Aegis Vanguard",
-    "Chrono Legion",
-    "Valkyrie Ops",
-    "Frostbite Division",
-    "Ironclad Core",
-  ];
-  const participantsT3: Participant[] = t3TeamNames.map((name, i) => ({
-    id: `part_t3_${i + 1}`,
-    tournament_id: t3Id,
-    user_id: null,
-    display_name: name,
-    participant_type: "team",
-    seed: i + 1,
-    registration_status: "confirmed",
-    created_at: new Date(Date.now() - 3600000 * 5 + i * 1000).toISOString(),
-    updated_at: new Date().toISOString(),
-  }));
-
-  const allParticipants = [...participantsT1, ...participantsT2, ...participantsT3];
-
-  // Pre-generate bracket for Tournament 1 (7 teams -> 8 capacity, 1 bye)
-  const { matches: t1Matches } = generateBracket(t1Id, participantsT1, "seeded");
-
-  // Pre-generate bracket for Tournament 3 (5 teams -> 8 capacity, 3 byes)
-  const { matches: t3Matches } = generateBracket(t3Id, participantsT3, "seeded");
-
-  const allMatches = [...t1Matches, ...t3Matches];
-
-  const logs: ActivityLog[] = [
-    {
-      id: "log_1",
-      tournament_id: t1Id,
-      action: "Tournament Created",
-      description: "APEX CYBER CLASH created by Apex Organizer.",
-      actor_name: "Apex Organizer",
-      timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
-    },
-    {
-      id: "log_2",
-      tournament_id: t1Id,
-      action: "Bracket Generated",
-      description: "Bracket generated for 7 teams. Seed 1 (Team Alpha) awarded Round 1 bye.",
-      actor_name: "Apex Organizer",
-      timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-    },
-  ];
-
+// Clean Initial State (No dummy data)
+function getInitialSeedData(): {
+  tournaments: Tournament[];
+  participants: Participant[];
+  matches: Match[];
+  logs: ActivityLog[];
+} {
   return {
-    tournaments,
-    participants: allParticipants,
-    matches: allMatches,
-    logs,
+    tournaments: [],
+    participants: [],
+    matches: [],
+    logs: [],
   };
 }
 
@@ -227,7 +72,6 @@ function saveToStorage<T>(key: string, data: T): void {
   }
 }
 
-// Initialize browser storage if empty
 export function initStorage(): void {
   if (!isBrowser()) return;
   const existing = window.localStorage.getItem(STORAGE_KEY_TOURNAMENTS);
@@ -238,6 +82,26 @@ export function initStorage(): void {
     saveToStorage(STORAGE_KEY_MATCHES, seed.matches);
     saveToStorage(STORAGE_KEY_LOGS, seed.logs);
     saveToStorage(STORAGE_KEY_USER, DEFAULT_USER);
+  } else {
+    try {
+      const parsed: Tournament[] = JSON.parse(existing);
+      const isLegacyDummy = parsed.some((t) =>
+        t.id.startsWith("tourney_apex_cyber_clash") ||
+        t.id.startsWith("tourney_nexus_invitational") ||
+        t.id.startsWith("tourney_titan_masters")
+      );
+      if (isLegacyDummy) {
+        const cleanTourneys = parsed.filter(
+          (t) =>
+            !t.id.startsWith("tourney_apex_cyber_clash") &&
+            !t.id.startsWith("tourney_nexus_invitational") &&
+            !t.id.startsWith("tourney_titan_masters")
+        );
+        saveToStorage(STORAGE_KEY_TOURNAMENTS, cleanTourneys);
+      }
+    } catch {
+      // ignore
+    }
   }
 }
 
