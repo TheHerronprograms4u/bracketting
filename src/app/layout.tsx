@@ -14,9 +14,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "ARENA — Dynamic Tournament Bracketing Platform",
+  title: "ACCeSS ARENA — Dynamic Tournament Bracketing Platform",
   description:
-    "Every Match Matters (Seram sanang lanet!). High-performance dynamic tournament bracketing engine with arbitrary participant counts, automatic bye progression, and cinematic elimination effects.",
+    "Every Match Matters. ACCeSS ARENA — High-performance dynamic tournament bracketing engine with arbitrary participant counts, automatic bye progression, and cinematic elimination effects.",
 };
 
 export default function RootLayout({

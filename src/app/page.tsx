@@ -169,13 +169,13 @@ export default function HomePage() {
         <div className="absolute top-14 left-1/2 -translate-x-1/2 w-[550px] max-w-full h-[220px] bg-arena-highlight/15 rounded-full blur-[80px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-arena-accent/10 border border-arena-accent/25 backdrop-blur-md text-arena-highlight text-xs font-bold uppercase tracking-widest mb-6 shadow-sm">
-            <Zap className="w-3.5 h-3.5 text-arena-accent" />
-            <span>Dynamic Bracketing Platform</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-access-gold/10 border border-access-gold/30 backdrop-blur-md text-access-gold text-xs font-bold uppercase tracking-widest mb-6 shadow-sm">
+            <Zap className="w-3.5 h-3.5 text-access-gold" />
+            <span>ACCeSS ARENA — Bracketing Platform</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-[0_0_35px_rgba(179,206,229,0.22)]">
-            EVERY MATCH <span className="text-arena-highlight drop-shadow-[0_0_25px_rgba(119,159,186,0.4)]">MATTERS.</span>
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-[0_0_35px_rgba(255,184,0,0.22)]">
+            EVERY MATCH <span className="text-access-gold drop-shadow-[0_0_25px_rgba(255,184,0,0.4)]">MATTERS.</span>
           </h1>
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-arena-muted mb-8 leading-relaxed">

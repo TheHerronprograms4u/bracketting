@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   getCurrentUser,
@@ -11,7 +12,6 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { User, UserRole } from "@/types/tournament";
 import { PasswordModal } from "./PasswordModal";
 import {
-  Trophy,
   PlusCircle,
   Database,
   UserCheck,
@@ -71,13 +71,20 @@ export const Navbar: React.FC = () => {
           {/* Logo and Tagline */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-8 h-8 rounded-lg bg-arena-accent/20 border border-arena-accent flex items-center justify-center text-arena-highlight shadow-glow-sm group-hover:scale-105 transition-transform">
-                <Trophy className="w-4 h-4" />
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-access-gold shadow-glow-gold group-hover:scale-105 transition-transform flex-shrink-0">
+                <Image
+                  src="/access-logo.jpg"
+                  alt="ACCeSS Logo"
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover"
+                  priority
+                />
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-lg tracking-wider text-white flex items-center gap-1.5">
-                  ARENA
-                  <span className="w-1.5 h-1.5 rounded-full bg-arena-accent animate-pulse" />
+                  ACCe<span className="text-access-gold">SS</span> ARENA
+                  <span className="w-1.5 h-1.5 rounded-full bg-access-gold animate-pulse" />
                 </span>
                 <span className="text-[10px] uppercase font-bold tracking-widest text-arena-muted">
                   Every Match Matters
