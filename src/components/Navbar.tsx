@@ -18,7 +18,6 @@ import {
   UserCheck,
   ChevronDown,
   Lock,
-  Sparkles,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
@@ -166,7 +165,6 @@ export const Navbar: React.FC = () => {
                   if (isHolding || isPartyOpen) e.preventDefault();
                 }}
                 className="flex items-center gap-2 group select-none relative cursor-pointer"
-                title={isPartyOpen ? "Party Mode Activated!" : "ACCeSS Arena (Hold for 5s... HEHE!)"}
               >
                 {/* Hold progress ring & Logo */}
                 <div className="relative flex items-center justify-center">
@@ -207,58 +205,32 @@ export const Navbar: React.FC = () => {
 
                   <div
                     className={`w-10 h-10 rounded-full overflow-hidden border-2 transition-all duration-300 flex-shrink-0 ${
-                      isPartyOpen
-                        ? "border-pink-500 shadow-[0_0_20px_rgba(236,72,153,0.8)] scale-110 animate-bounce"
-                        : isHolding
+                      isHolding
                         ? "border-amber-400 shadow-[0_0_25px_rgba(255,184,0,0.85)] scale-105 animate-pulse"
                         : "border-access-gold shadow-glow-gold group-hover:scale-105"
                     }`}
                   >
                     <Image
-                      src={isPartyOpen ? "/marco.jpg" : "/access-logo.jpg"}
-                      alt={isPartyOpen ? "Party Marco" : "ACCeSS Logo"}
+                      src="/access-logo.jpg"
+                      alt="ACCeSS Logo"
                       width={40}
                       height={40}
-                      className="w-full h-full object-cover transition-all duration-300"
+                      className="w-full h-full object-cover"
                       priority
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col">
-                  {isPartyOpen ? (
-                    <>
-                      <span className="font-black text-lg tracking-wider text-amber-300 flex items-center gap-1.5 animate-pulse">
-                        MARCO ARENA 🎉
-                        <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-ping" />
-                      </span>
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-pink-300">
-                        Party Mode Active HEHE!
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-black text-lg tracking-wider text-white flex items-center gap-1.5">
-                        ACCeSS ARENA
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      </span>
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-arena-muted">
-                        Every Match Matters
-                      </span>
-                    </>
-                  )}
-                </div>
-              </Link>
-
-              {/* Hold progress popup hint */}
-              {isHolding && (
-                <div className="absolute top-12 left-0 z-50 whitespace-nowrap px-3 py-1 rounded-full bg-black/90 border border-amber-400/80 text-[11px] font-bold text-amber-300 shadow-xl flex items-center gap-1.5 pointer-events-none animate-in fade-in zoom-in-95">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" />
-                  <span>
-                    Hold for surprise... HEHE! ({Math.max(0, 5 - (holdProgress / 100) * 5).toFixed(1)}s)
+                  <span className="font-black text-lg tracking-wider text-white flex items-center gap-1.5">
+                    ACCeSS ARENA
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-arena-muted">
+                    Every Match Matters
                   </span>
                 </div>
-              )}
+              </Link>
             </div>
 
             {/* Navigation Links */}
