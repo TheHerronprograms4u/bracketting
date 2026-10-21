@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
+import { playPartyFanfare } from "@/lib/sound-effects";
 
 interface MarcoPartyModalProps {
   isOpen: boolean;
@@ -16,8 +17,19 @@ export const MarcoPartyModal: React.FC<MarcoPartyModalProps> = ({
   onClose,
   durationSeconds = 5,
 }) => {
+  const audioStopRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      if (audioStopRef.current) {
+        audioStopRef.current();
+        audioStopRef.current = null;
+      }
+      return;
+    }
+
+    // Play party fanfare sound effect
+    audioStopRef.current = playPartyFanfare(false);
 
     // Confetti cannons from sides and top
     const fireSideCannons = () => {
@@ -75,6 +87,10 @@ export const MarcoPartyModal: React.FC<MarcoPartyModalProps> = ({
       clearInterval(burstInterval);
       clearTimeout(closeTimer);
       window.removeEventListener("keydown", handleKeyDown);
+      if (audioStopRef.current) {
+        audioStopRef.current();
+        audioStopRef.current = null;
+      }
     };
   }, [isOpen, durationSeconds, onClose]);
 
