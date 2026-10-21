@@ -121,3 +121,121 @@ export function playVictoryFanfare(isMuted: boolean = false): void {
     osc.stop(now + idx * 0.1 + 0.7);
   });
 }
+
+/**
+ * High-energy party fanfare & celebratory melody for Marco Easter Egg.
+ * Uses Web Audio synthesizer to generate festive brass, bouncy bass, and chimes.
+ * Returns a cancel function to stop playback immediately if user reverts early.
+ */
+export function playPartyFanfare(isMuted: boolean = false): () => void {
+  if (isMuted) return () => {};
+  const ctx = getAudioContext();
+  if (!ctx) return () => {};
+
+  const masterGain = ctx.createGain();
+  masterGain.gain.setValueAtTime(0.28, ctx.currentTime);
+  masterGain.connect(ctx.destination);
+
+  const activeNodes: OscillatorNode[] = [];
+  const now = ctx.currentTime;
+
+  // Party melody notes (frequencies in Hz: C4, E4, G4, A4, G4, C5, E5, D5, C5...)
+  const melody = [
+    { freq: 261.63, time: 0.0, dur: 0.18, type: "sawtooth" as OscillatorType }, // C4
+    { freq: 329.63, time: 0.18, dur: 0.18, type: "sawtooth" as OscillatorType }, // E4
+    { freq: 392.00, time: 0.36, dur: 0.22, type: "sawtooth" as OscillatorType }, // G4
+    { freq: 523.25, time: 0.60, dur: 0.35, type: "triangle" as OscillatorType }, // C5
+    { freq: 392.00, time: 0.98, dur: 0.18, type: "sawtooth" as OscillatorType }, // G4
+    { freq: 523.25, time: 1.18, dur: 0.20, type: "sawtooth" as OscillatorType }, // C5
+    { freq: 659.25, time: 1.40, dur: 0.55, type: "triangle" as OscillatorType }, // E5
+    { freq: 587.33, time: 1.98, dur: 0.20, type: "sawtooth" as OscillatorType }, // D5
+    { freq: 523.25, time: 2.20, dur: 0.65, type: "triangle" as OscillatorType }, // C5
+    // Joyful secondary arpeggio
+    { freq: 659.25, time: 2.90, dur: 0.15, type: "triangle" as OscillatorType }, // E5
+    { freq: 783.99, time: 3.08, dur: 0.15, type: "triangle" as OscillatorType }, // G5
+    { freq: 1046.50, time: 3.26, dur: 0.70, type: "triangle" as OscillatorType }, // C6
+  ];
+
+  // Upbeat bouncy bass line
+  const bassNotes = [
+    { freq: 130.81, time: 0.0, dur: 0.35 },
+    { freq: 164.81, time: 0.4, dur: 0.35 },
+    { freq: 196.00, time: 0.8, dur: 0.35 },
+    { freq: 130.81, time: 1.2, dur: 0.35 },
+    { freq: 174.61, time: 1.6, dur: 0.35 },
+    { freq: 196.00, time: 2.0, dur: 0.45 },
+    { freq: 130.81, time: 2.6, dur: 0.70 },
+    { freq: 130.81, time: 3.3, dur: 0.80 },
+  ];
+
+  // Play melody
+  melody.forEach((note) => {
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      osc.type = note.type;
+      osc.frequency.setValueAtTime(note.freq, now + note.time);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(2500, now + note.time);
+
+      gain.gain.setValueAtTime(0, now + note.time);
+      gain.gain.linearRampToValueAtTime(0.3, now + note.time + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now + note.time);
+      osc.stop(now + note.time + note.dur + 0.05);
+      activeNodes.push(osc);
+    } catch {
+      // Audio node scheduling guard
+    }
+  });
+
+  // Play bass
+  bassNotes.forEach((note) => {
+    try {
+      const bassOsc = ctx.createOscillator();
+      const bassGain = ctx.createGain();
+
+      bassOsc.type = "sine";
+      bassOsc.frequency.setValueAtTime(note.freq, now + note.time);
+
+      bassGain.gain.setValueAtTime(0, now + note.time);
+      bassGain.gain.linearRampToValueAtTime(0.25, now + note.time + 0.04);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur);
+
+      bassOsc.connect(bassGain);
+      bassGain.connect(masterGain);
+
+      bassOsc.start(now + note.time);
+      bassOsc.stop(now + note.time + note.dur + 0.05);
+      activeNodes.push(bassOsc);
+    } catch {
+      // Audio node scheduling guard
+    }
+  });
+
+  return () => {
+    try {
+      masterGain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.05);
+      setTimeout(() => {
+        activeNodes.forEach((node) => {
+          try {
+            node.stop();
+            node.disconnect();
+          } catch {
+            // Already stopped
+          }
+        });
+      }, 100);
+    } catch {
+      // Ignore
+    }
+  };
+}
