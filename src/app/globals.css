@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #070E1A;
+  --background: transparent;
   --foreground: #F5F8FF;
   --access-blue: #1A3A8A;
   --access-gold: #FFB800;
@@ -13,10 +13,39 @@
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: var(--background);
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   overflow-x: hidden;
   min-height: 100vh;
+}
+
+/* ── Global Background Image ───────────────────────────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url("/bg-opaque.jpg");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  /* Deep navy overlay to keep text readable while letting the image show */
+  filter: brightness(0.28) saturate(1.1);
+}
+
+/* Subtle animated radial spotlight to add dynamism over the bg */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 40%,
+    rgba(26, 58, 138, 0.25) 0%,
+    rgba(7, 14, 26, 0.55) 55%,
+    rgba(7, 14, 26, 0.82) 100%
+  );
+  pointer-events: none;
 }
 
 /* Custom scrollbars for bracket canvas and tables */
@@ -47,4 +76,22 @@ body {
   .bg-radial-glow {
     background: radial-gradient(ellipse 65% 55% at 50% 50%, rgba(255, 184, 0, 0.15) 0%, rgba(26, 58, 138, 0.12) 50%, transparent 75%);
   }
+}
+
+/* ── Transparent surface overrides so bg image shows through ──────── */
+/* These override the solid Tailwind hex colors with semi-transparent ones */
+.bg-arena-bg   { background-color: transparent !important; }
+.bg-arena-surface { background-color: rgba(7, 14, 26, 0.50) !important; }
+.bg-arena-elevated { background-color: rgba(26, 58, 138, 0.50) !important; }
+.bg-arena-card { background-color: rgba(12, 22, 40, 0.60) !important; }
+
+/* Navbar: slightly more opaque so it stays readable */
+header.sticky { background-color: rgba(7, 14, 26, 0.70) !important; }
+
+/* Backdrop blur helpers for glass-morphism panels */
+.bg-arena-elevated,
+.bg-arena-card,
+.bg-arena-surface {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }

@@ -22,20 +22,20 @@ const config: Config = {
         },
 
         arena: {
-          bg: "#070E1A",         // Deep Navy Base (logo dark bg)
-          surface: "#0C1628",    // Midnight Navy Surface
-          elevated: "#1A3A8A",   // Royal Blue (ACCeSS primary)
-          card: "#0F1E38",       // Deep Navy Card
-          border: "#1E3060",     // Navy Border
-          borderLight: "#2347A8",// Royal Blue Border / Hover
-          text: "#F5F8FF",       // Clean White
-          muted: "#8FADD4",      // Muted Blue-White (Secondary Text)
-          accent: "#FFB800",     // Gold Accent (Primary Actions)
-          accentHover: "#E09900",// Gold Hover
-          highlight: "#FFCF4D",  // Light Gold (Highlights & Glow)
-          deep: "#1A3A8A",       // Royal Blue Deep
-          success: "#38BDF8",    // Sky Blue Success
-          danger: "#F87171",     // Red Danger
+          bg: "#070E1A",
+          surface: "#0C1628",
+          elevated: "#1A3A8A",
+          card: "#0F1E38",
+          border: "#1E3060",
+          borderLight: "#2347A8",
+          text: "#F5F8FF",
+          muted: "#8FADD4",
+          accent: "#FFB800",
+          accentHover: "#E09900",
+          highlight: "#FFCF4D",
+          deep: "#1A3A8A",
+          success: "#38BDF8",
+          danger: "#F87171",
         },
       },
       fontFamily: {

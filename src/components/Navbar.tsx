@@ -70,7 +70,7 @@ export const Navbar: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo and Tagline */}
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-3 group">
+            <Link href="/" className="flex items-center gap-2 group">
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-access-gold shadow-glow-gold group-hover:scale-105 transition-transform flex-shrink-0">
                 <Image
                   src="/access-logo.jpg"
@@ -83,8 +83,8 @@ export const Navbar: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-lg tracking-wider text-white flex items-center gap-1.5">
-                  ACCe<span className="text-access-gold">SS</span> ARENA
-                  <span className="w-1.5 h-1.5 rounded-full bg-access-gold animate-pulse" />
+                  ACCeSS ARENA
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 </span>
                 <span className="text-[10px] uppercase font-bold tracking-widest text-arena-muted">
                   Every Match Matters
