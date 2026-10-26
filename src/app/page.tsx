@@ -195,9 +195,7 @@ export default function HomePage() {
           </div>
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-arena-muted mb-8 leading-relaxed">
-            The next-generation competitive bracket engine. Register any participant
-            count, compute mathematically precise byes automatically, and experience
-            cinematic digital victory destructions.
+            BU ACCeSS Arena is a bracketting platform developed for tournaments and competitions. A fun way to manage a tournament.
           </p>
 
           {/* Call to Actions */}
