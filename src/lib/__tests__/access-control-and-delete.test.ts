@@ -6,6 +6,7 @@ import {
   deleteTournament,
   addParticipant,
   bulkAddParticipants,
+  updateParticipant,
   generateTournamentBracket,
   recordMatchWinner,
   resetTournament,
@@ -192,5 +193,77 @@ describe("Tournament Deletion Flow (Only After Completion)", () => {
     // Verify tournament and its details no longer exist
     expect(getTournaments().some((t) => t.id === tourney.id)).toBe(false);
     expect(getTournamentById(tourney.id)).toBeNull();
+  });
+
+  it("registers teams with member names, preserves roster in details, and updates roster", () => {
+    setCurrentUserRole("organizer", "Access2026");
+    const tourney = createTournament({
+      name: "Roster Management Cup",
+      description: "Testing team rosters",
+      format: "single_elimination",
+      participant_type: "team",
+      capacity_limit: null,
+      registration_status: "open",
+      seeding_method: "seeded",
+      has_scoring: true,
+    });
+
+    // 1. Register team with members
+    const teamA = addParticipant(tourney.id, "Team Liquid", "team", undefined, [
+      "KuroKy",
+      "Miracle-",
+      "MinD_ContRoL",
+      "GH",
+      "MATUMBAMAN",
+    ]);
+
+    expect(teamA.roster).toEqual([
+      "KuroKy",
+      "Miracle-",
+      "MinD_ContRoL",
+      "GH",
+      "MATUMBAMAN",
+    ]);
+
+    // 2. Bulk add teams with member syntax
+    const bulkResults = bulkAddParticipants(tourney.id, [
+      "OG: N0tail, Ana, Topson, Ceb, JerAx",
+      "Team Secret",
+      "Evil Geniuses (Arteezy, SumaiL, s4, Cr1t-, Fly)",
+    ]);
+
+    expect(bulkResults.length).toBe(3);
+    const og = bulkResults.find((p) => p.display_name === "OG")!;
+    expect(og.roster).toEqual(["N0tail", "Ana", "Topson", "Ceb", "JerAx"]);
+
+    const secret = bulkResults.find((p) => p.display_name === "Team Secret")!;
+    expect(secret.roster).toBeUndefined();
+
+    const eg = bulkResults.find((p) => p.display_name === "Evil Geniuses")!;
+    expect(eg.roster).toEqual(["Arteezy", "SumaiL", "s4", "Cr1t-", "Fly"]);
+
+    // 3. Verify getTournamentById returns roster
+    const details = getTournamentById(tourney.id)!;
+    const foundLiquid = details.participants.find((p) => p.id === teamA.id)!;
+    expect(foundLiquid.roster?.length).toBe(5);
+
+    // 4. Update team roster
+    const updatedLiquid = updateParticipant(teamA.id, {
+      display_name: "Team Liquid Prime",
+      roster: ["KuroKy", "Miracle-", "Nisha"],
+    });
+    expect(updatedLiquid.display_name).toBe("Team Liquid Prime");
+    expect(updatedLiquid.roster).toEqual(["KuroKy", "Miracle-", "Nisha"]);
+
+    // 5. Generate bracket - verify bracket matches only contain competitor IDs
+    const bracketDetails = generateTournamentBracket(tourney.id);
+    expect(bracketDetails.matches.length).toBeGreaterThan(0);
+    bracketDetails.matches.forEach((m) => {
+      // Match itself does not have a roster field
+      expect((m as unknown as { roster?: unknown }).roster).toBeUndefined();
+    });
+    // Participants preserved with rosters
+    const liquidInBracket = bracketDetails.participants.find((p) => p.id === teamA.id)!;
+    expect(liquidInBracket.roster).toEqual(["KuroKy", "Miracle-", "Nisha"]);
   });
 });

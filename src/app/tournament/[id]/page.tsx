@@ -12,7 +12,7 @@ import {
   deleteTournament,
   addParticipant,
   bulkAddParticipants,
-  updateParticipantName,
+  updateParticipant,
   removeParticipant,
   getCurrentUser,
 } from "@/lib/storage";
@@ -257,22 +257,22 @@ export default function TournamentDetailPage() {
   };
 
   // 8. Participant Roster Actions
-  const handleAddParticipant = (name: string, seed?: number) => {
-    addParticipant(tournament.id, name, tournament.participant_type, seed);
+  const handleAddParticipant = (name: string, seed?: number, roster?: string[]) => {
+    addParticipant(tournament.id, name, tournament.participant_type, seed, roster);
     loadData();
     showToast(`Registered "${name}" into tournament.`);
   };
 
-  const handleBulkAdd = (names: string[]) => {
-    const added = bulkAddParticipants(tournament.id, names);
+  const handleBulkAdd = (entries: (string | { name: string; roster?: string[] })[]) => {
+    const added = bulkAddParticipants(tournament.id, entries);
     loadData();
     showToast(`Bulk imported ${added.length} competitors.`);
   };
 
-  const handleRename = (id: string, newName: string) => {
-    updateParticipantName(id, newName);
+  const handleRename = (id: string, newName: string, newRoster?: string[]) => {
+    updateParticipant(id, { display_name: newName, roster: newRoster });
     loadData();
-    showToast(`Renamed competitor to "${newName}".`);
+    showToast(`Updated competitor "${newName}".`);
   };
 
   const handleRemove = (id: string) => {
@@ -404,18 +404,80 @@ export default function TournamentDetailPage() {
 
         {/* Tab Content */}
         {activeTab === "bracket" && (
-          <BracketCanvas
-            tournamentId={tournament.id}
-            matches={matches}
-            participants={participants}
-            hasScoring={tournament.has_scoring}
-            currentUserRole={currentUserRole}
-            champion={champion}
-            format={tournament.format}
-            onSelectWinner={handleSelectWinner}
-            onCorrectResult={handleCorrectResultTrigger}
-            onRenameParticipant={handleRename}
-          />
+          <div className="space-y-6">
+            <BracketCanvas
+              tournamentId={tournament.id}
+              matches={matches}
+              participants={participants}
+              hasScoring={tournament.has_scoring}
+              currentUserRole={currentUserRole}
+              champion={champion}
+              format={tournament.format}
+              onSelectWinner={handleSelectWinner}
+              onCorrectResult={handleCorrectResultTrigger}
+              onRenameParticipant={handleRename}
+            />
+
+            {/* Team Rosters Section below the generated bracket */}
+            {participants.length > 0 && tournament.participant_type === "team" && (
+              <div className="rounded-2xl bg-arena-card border border-arena-border p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-arena-border/50">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-arena-accent" />
+                    <h3 className="text-base font-bold text-white">Team Rosters</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-arena-surface border border-arena-border text-xs font-semibold text-arena-highlight">
+                      {participants.length} Teams
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("participants")}
+                    className="text-xs text-arena-accent hover:text-arena-highlight hover:underline font-semibold transition"
+                  >
+                    Manage Roster &rarr;
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {participants.map((team) => (
+                    <div
+                      key={team.id}
+                      className="p-3.5 rounded-xl bg-arena-surface/60 border border-arena-border/80 hover:border-arena-borderLight transition"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {team.seed && (
+                            <span className="shrink-0 w-5 h-5 rounded bg-arena-elevated border border-arena-border flex items-center justify-center text-[10px] font-bold text-arena-muted">
+                              #{team.seed}
+                            </span>
+                          )}
+                          <span className="font-bold text-white text-xs truncate">
+                            {team.display_name}
+                          </span>
+                        </div>
+                      </div>
+
+                      {team.roster && team.roster.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-arena-border/30">
+                          {team.roster.map((member, mIdx) => (
+                            <span
+                              key={mIdx}
+                              className="inline-flex items-center px-2 py-0.5 rounded-md bg-arena-elevated border border-arena-border/60 text-[11px] text-arena-text font-medium"
+                            >
+                              {member}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-arena-muted italic pt-1 border-t border-arena-border/30">
+                          No members listed
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === "participants" && (

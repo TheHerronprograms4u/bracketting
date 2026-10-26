@@ -20,9 +20,9 @@ interface ParticipantManagerProps {
   participants: Participant[];
   currentUserRole: UserRole;
   isLocked: boolean; // if tournament is already in progress / completed
-  onAddParticipant: (name: string, seed?: number) => void;
-  onBulkAddParticipants: (names: string[]) => void;
-  onRenameParticipant: (id: string, newName: string) => void;
+  onAddParticipant: (name: string, seed?: number, roster?: string[]) => void;
+  onBulkAddParticipants: (entries: (string | { name: string; roster?: string[] })[]) => void;
+  onRenameParticipant: (id: string, newName: string, newRoster?: string[]) => void;
   onRemoveParticipant: (id: string) => void;
 }
 
@@ -44,6 +44,7 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
 
   // Single add form
   const [singleName, setSingleName] = useState("");
+  const [singleMembersText, setSingleMembersText] = useState("");
   const [singleError, setSingleError] = useState("");
 
   // Bulk add form
@@ -53,12 +54,17 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
   // Inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editRosterValue, setEditRosterValue] = useState("");
 
   // Filtered participants
   const filteredParticipants = useMemo(() => {
-    return participants.filter((p) =>
-      p.display_name.toLowerCase().includes(searchQuery.toLowerCase().trim())
-    );
+    return participants.filter((p) => {
+      const matchName = p.display_name.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      const matchRoster = p.roster?.some((m) =>
+        m.toLowerCase().includes(searchQuery.toLowerCase().trim())
+      );
+      return matchName || matchRoster;
+    });
   }, [participants, searchQuery]);
 
   // Bulk parsed entries preview
@@ -70,13 +76,47 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
 
     const existingLower = new Set(participants.map((p) => p.display_name.toLowerCase()));
     const duplicates: string[] = [];
-    const valid: string[] = [];
+    const valid: { name: string; roster?: string[] }[] = [];
+    let totalMembersCount = 0;
 
-    lines.forEach((name) => {
-      if (existingLower.has(name.toLowerCase()) || valid.includes(name)) {
-        duplicates.push(name);
+    lines.forEach((line) => {
+      let teamName = line;
+      let roster: string[] | undefined = undefined;
+
+      const colonIdx = line.indexOf(":");
+      if (colonIdx !== -1) {
+        teamName = line.substring(0, colonIdx).trim();
+        const membersStr = line.substring(colonIdx + 1).trim();
+        const members = membersStr
+          .split(/[,;\t]/)
+          .map((m) => m.trim())
+          .filter((m) => m.length > 0);
+        if (members.length > 0) {
+          roster = members;
+        }
       } else {
-        valid.push(name);
+        const parenMatch = line.match(/^([^(]+)\(([^)]+)\)$/);
+        if (parenMatch) {
+          teamName = parenMatch[1].trim();
+          const members = parenMatch[2]
+            .split(/[,;\t]/)
+            .map((m) => m.trim())
+            .filter((m) => m.length > 0);
+          if (members.length > 0) {
+            roster = members;
+          }
+        }
+      }
+
+      if (roster) {
+        totalMembersCount += roster.length;
+      }
+
+      const validNamesLower = valid.map((v) => v.name.toLowerCase());
+      if (existingLower.has(teamName.toLowerCase()) || validNamesLower.includes(teamName.toLowerCase())) {
+        duplicates.push(teamName);
+      } else if (teamName) {
+        valid.push({ name: teamName, roster });
       }
     });
 
@@ -84,6 +124,7 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
       totalLines: lines.length,
       valid,
       duplicates,
+      totalMembersCount,
     };
   }, [bulkText, participants]);
 
@@ -103,9 +144,15 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
       return;
     }
 
+    const members = singleMembersText
+      .split(/[\n,;]/)
+      .map((m) => m.trim())
+      .filter((m) => m.length > 0);
+
     try {
-      onAddParticipant(trimmed);
+      onAddParticipant(trimmed, undefined, members.length > 0 ? members : undefined);
       setSingleName("");
+      setSingleMembersText("");
       setIsAddModalOpen(false);
     } catch (err: unknown) {
       setSingleError(err instanceof Error ? err.message : "Failed to add participant.");
@@ -131,19 +178,27 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
   const handleStartEdit = (p: Participant) => {
     setEditingId(p.id);
     setEditValue(p.display_name);
+    setEditRosterValue((p.roster ?? []).join(", "));
   };
 
   const handleSaveEdit = (id: string) => {
     if (editValue.trim()) {
-      onRenameParticipant(id, editValue.trim());
+      const parsedRoster = editRosterValue
+        .split(/[,;\n]/)
+        .map((m) => m.trim())
+        .filter((m) => m.length > 0);
+      onRenameParticipant(id, editValue.trim(), parsedRoster);
     }
     setEditingId(null);
   };
 
   const handleExportCSV = () => {
-    const header = "Seed,Display Name,Type,Status\n";
+    const header = "Seed,Display Name,Type,Status,Roster\n";
     const rows = participants
-      .map((p) => `${p.seed ?? ""},"${p.display_name}",${p.participant_type},${p.registration_status}`)
+      .map((p) => {
+        const rosterStr = p.roster && p.roster.length > 0 ? `"${p.roster.join("; ")}"` : '""';
+        return `${p.seed ?? ""},"${p.display_name.replace(/"/g, '""')}",${p.participant_type},${p.registration_status},${rosterStr}`;
+      })
       .join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -245,42 +300,99 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
                   {/* Name (with inline edit) */}
                   <td className="py-3 px-4">
                     {editingId === p.id ? (
-                      <div className="flex items-center gap-1.5 max-w-xs">
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full px-2 py-1 bg-arena-elevated border border-arena-accent rounded text-white text-xs outline-none"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleSaveEdit(p.id)}
-                          className="p-1 hover:text-emerald-400 text-arena-muted"
-                          title="Save"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="p-1 hover:text-red-400 text-arena-muted"
-                          title="Cancel"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                      <div className="space-y-2 py-1 max-w-sm">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-arena-muted block mb-1">
+                            Competitor / Team Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="w-full px-2.5 py-1 bg-arena-elevated border border-arena-accent rounded text-white text-xs outline-none"
+                            autoFocus
+                          />
+                        </div>
+                        {tournament.participant_type === "team" && (
+                          <div>
+                            <label className="text-[10px] uppercase font-bold text-arena-muted block mb-1">
+                              Team Members (Comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={editRosterValue}
+                              onChange={(e) => setEditRosterValue(e.target.value)}
+                              placeholder="e.g. Alice, Bob, Charlie"
+                              className="w-full px-2.5 py-1 bg-arena-elevated border border-arena-border focus:border-arena-accent rounded text-white text-xs outline-none"
+                            />
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={() => handleSaveEdit(p.id)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-semibold text-[11px]"
+                            title="Save"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Save</span>
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded bg-arena-surface text-arena-muted hover:text-white font-semibold text-[11px]"
+                            title="Cancel"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Cancel</span>
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">
-                          {p.display_name}
-                        </span>
-                        {isOrganizer && (
-                          <button
-                            onClick={() => handleStartEdit(p)}
-                            className="p-1 text-arena-muted hover:text-white transition opacity-60 hover:opacity-100"
-                            title="Edit Name"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">
+                            {p.display_name}
+                          </span>
+                          {isOrganizer && !isLocked && (
+                            <button
+                              onClick={() => handleStartEdit(p)}
+                              className="p-1 text-arena-muted hover:text-white transition opacity-60 hover:opacity-100"
+                              title="Edit Team & Roster"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Team Roster / Members below the team name */}
+                        {p.roster && p.roster.length > 0 ? (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-[10px] uppercase font-bold text-arena-highlight/90 tracking-wider flex items-center gap-1">
+                              <Users className="w-3 h-3 text-arena-accent" />
+                              <span>Members ({p.roster.length}):</span>
+                            </span>
+                            {p.roster.map((member, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-2 py-0.5 rounded-md bg-arena-surface border border-arena-border text-[11px] text-arena-text font-medium"
+                              >
+                                {member}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          tournament.participant_type === "team" && (
+                            <div className="mt-1 text-[11px] text-arena-muted/60 italic flex items-center gap-1">
+                              <span>No members listed</span>
+                              {isOrganizer && !isLocked && (
+                                <button
+                                  onClick={() => handleStartEdit(p)}
+                                  className="text-arena-highlight hover:underline text-[10px] ml-1 not-italic font-semibold"
+                                >
+                                  + Add members
+                                </button>
+                              )}
+                            </div>
+                          )
                         )}
                       </div>
                     )}
@@ -336,29 +448,53 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
 
             <h3 className="text-base font-bold text-white mb-1">Add Competitor</h3>
             <p className="text-xs text-arena-muted mb-4">
-              Register an individual player or team into the tournament.
+              {tournament.participant_type === "team"
+                ? "Register a team and its roster into the tournament."
+                : "Register an individual player into the tournament."}
             </p>
 
             <form onSubmit={handleSingleAdd}>
               <div className="mb-4">
                 <label className="block text-xs font-semibold text-arena-muted mb-1.5">
-                  Competitor Name
+                  {tournament.participant_type === "team" ? "Team Name *" : "Competitor Name *"}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Team Phoenix"
+                  placeholder={tournament.participant_type === "team" ? "e.g. Team Phoenix" : "e.g. PhoenixStrike"}
                   value={singleName}
                   onChange={(e) => setSingleName(e.target.value)}
                   className="w-full px-3 py-2 bg-arena-surface border border-arena-border focus:border-arena-accent rounded-xl text-white text-xs outline-none"
                   autoFocus
                 />
-                {singleError && (
-                  <p className="text-xs text-arena-danger mt-1.5 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{singleError}</span>
-                  </p>
-                )}
               </div>
+
+              {tournament.participant_type === "team" && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-arena-muted">
+                      Team Members / Roster (Optional)
+                    </label>
+                    <span className="text-[10px] text-arena-muted">Comma or line separated</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    placeholder={"Alice, Bob, Charlie, David\nor one player per line"}
+                    value={singleMembersText}
+                    onChange={(e) => setSingleMembersText(e.target.value)}
+                    className="w-full px-3 py-2 bg-arena-surface border border-arena-border focus:border-arena-accent rounded-xl text-white text-xs outline-none"
+                  />
+                  <p className="text-[11px] text-arena-muted mt-1">
+                    Member names will appear below the team name in the roster, not on bracket nodes.
+                  </p>
+                </div>
+              )}
+
+              {singleError && (
+                <p className="text-xs text-arena-danger mb-4 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{singleError}</span>
+                </p>
+              )}
 
               <div className="flex items-center justify-end gap-2">
                 <button
@@ -396,13 +532,22 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
               <h3 className="text-base font-bold text-white">Bulk Competitor Import</h3>
             </div>
             <p className="text-xs text-arena-muted mb-4">
-              Paste or type multiple competitor names, one per line.
+              Paste or type competitor names, one per line.
+              {tournament.participant_type === "team" && (
+                <span className="block text-arena-highlight mt-0.5">
+                  Tip: Include members with colon syntax, e.g. <span className="font-mono text-[11px]">Team Alpha: Player1, Player2, Player3</span>
+                </span>
+              )}
             </p>
 
             <div className="mb-4">
               <textarea
                 rows={7}
-                placeholder={"Team Alpha\nTeam Omega\nTeam Nova\nTeam Eclipse\nTeam Phantom\nTeam Vortex\nTeam Titan"}
+                placeholder={
+                  tournament.participant_type === "team"
+                    ? "Team Alpha: Alice, Bob, Charlie\nTeam Omega: John, Jane, Sam\nTeam Nova: Alex, Jordan\nTeam Eclipse\nTeam Phantom\nTeam Vortex\nTeam Titan"
+                    : "Player Alpha\nPlayer Omega\nPlayer Nova\nPlayer Eclipse\nPlayer Phantom\nPlayer Vortex\nPlayer Titan"
+                }
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
                 className="w-full p-3 font-mono text-xs bg-arena-surface border border-arena-border focus:border-arena-accent rounded-xl text-white outline-none"
@@ -410,13 +555,19 @@ export const ParticipantManager: React.FC<ParticipantManagerProps> = ({
             </div>
 
             {/* Validation & Preview Summary */}
-            <div className="p-3 rounded-xl bg-arena-surface border border-arena-border mb-4 text-xs">
-              <div className="flex items-center justify-between mb-1">
+            <div className="p-3 rounded-xl bg-arena-surface border border-arena-border mb-4 text-xs space-y-1">
+              <div className="flex items-center justify-between">
                 <span className="text-arena-muted">Valid New Competitors:</span>
                 <span className="font-bold text-emerald-400">
                   {bulkParsed.valid.length}
                 </span>
               </div>
+              {bulkParsed.totalMembersCount > 0 && (
+                <div className="flex items-center justify-between text-arena-highlight">
+                  <span>Detected Team Members:</span>
+                  <span className="font-bold">{bulkParsed.totalMembersCount}</span>
+                </div>
+              )}
               {bulkParsed.duplicates.length > 0 && (
                 <div className="flex items-center justify-between text-amber-400">
                   <span>Skipped Duplicates:</span>

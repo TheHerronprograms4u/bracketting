@@ -483,7 +483,8 @@ export function addParticipant(
   tournamentId: string,
   displayName: string,
   participantType: "individual" | "team" = "team",
-  seed?: number
+  seed?: number,
+  roster?: string[]
 ): Participant {
   const trimmed = displayName.trim();
   if (!trimmed) throw new Error("Participant name cannot be blank.");
@@ -513,6 +514,10 @@ export function addParticipant(
     throw new Error(`A competitor named "${trimmed}" is already registered.`);
   }
 
+  const cleanedRoster = Array.isArray(roster)
+    ? roster.map((m) => m.trim()).filter((m) => m.length > 0)
+    : undefined;
+
   const nextSeed = seed ?? details.participants.length + 1;
   const newParticipant: Participant = {
     id: `part_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -522,6 +527,7 @@ export function addParticipant(
     participant_type: participantType,
     seed: nextSeed,
     registration_status: "confirmed",
+    roster: cleanedRoster && cleanedRoster.length > 0 ? cleanedRoster : undefined,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -538,10 +544,14 @@ export function addParticipant(
     memoryStore.participants = updatedParts;
   }
 
+  const rosterNote = cleanedRoster && cleanedRoster.length > 0
+    ? ` with roster (${cleanedRoster.join(", ")})`
+    : "";
+
   logActivity(
     tournamentId,
     "Participant Registered",
-    `${newParticipant.display_name} registered (Seed #${newParticipant.seed}).`
+    `${newParticipant.display_name} registered (Seed #${newParticipant.seed})${rosterNote}.`
   );
 
   pushParticipantsToSupabase([newParticipant]);
@@ -549,7 +559,10 @@ export function addParticipant(
   return newParticipant;
 }
 
-export function bulkAddParticipants(tournamentId: string, rawLines: string[]): Participant[] {
+export function bulkAddParticipants(
+  tournamentId: string,
+  rawLines: (string | { name: string; roster?: string[] })[]
+): Participant[] {
   const user = getCurrentUser();
   if (user.role === "participant") {
     throw new Error("Participants are not authorized to bulk import participants.");
@@ -558,11 +571,57 @@ export function bulkAddParticipants(tournamentId: string, rawLines: string[]): P
   const details = getTournamentById(tournamentId);
   if (!details) throw new Error(`Tournament ${tournamentId} not found.`);
 
-  const validNames = rawLines
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  // Parse lines or objects into structured entries
+  const parsedEntries: { name: string; roster?: string[] }[] = [];
 
-  if (validNames.length === 0) {
+  for (const item of rawLines) {
+    if (typeof item === "string") {
+      const trimmed = item.trim();
+      if (!trimmed) continue;
+      // Support formats like:
+      // "Team Alpha: Alice, Bob, Charlie"
+      // "Team Alpha (Alice, Bob, Charlie)"
+      const colonIdx = trimmed.indexOf(":");
+      if (colonIdx !== -1) {
+        const teamName = trimmed.substring(0, colonIdx).trim();
+        const membersStr = trimmed.substring(colonIdx + 1).trim();
+        const roster = membersStr
+          .split(/[,;\t]/)
+          .map((m) => m.trim())
+          .filter((m) => m.length > 0);
+        if (teamName) {
+          parsedEntries.push({ name: teamName, roster: roster.length > 0 ? roster : undefined });
+        }
+      } else {
+        const parenMatch = trimmed.match(/^([^(]+)\(([^)]+)\)$/);
+        if (parenMatch) {
+          const teamName = parenMatch[1].trim();
+          const roster = parenMatch[2]
+            .split(/[,;\t]/)
+            .map((m) => m.trim())
+            .filter((m) => m.length > 0);
+          if (teamName) {
+            parsedEntries.push({ name: teamName, roster: roster.length > 0 ? roster : undefined });
+          }
+        } else {
+          parsedEntries.push({ name: trimmed });
+        }
+      }
+    } else if (item && typeof item === "object" && item.name) {
+      const trimmedName = item.name.trim();
+      if (trimmedName) {
+        const cleanedRoster = Array.isArray(item.roster)
+          ? item.roster.map((m) => m.trim()).filter((m) => m.length > 0)
+          : undefined;
+        parsedEntries.push({
+          name: trimmedName,
+          roster: cleanedRoster && cleanedRoster.length > 0 ? cleanedRoster : undefined,
+        });
+      }
+    }
+  }
+
+  if (parsedEntries.length === 0) {
     throw new Error("No valid competitor names found to import.");
   }
 
@@ -573,20 +632,21 @@ export function bulkAddParticipants(tournamentId: string, rawLines: string[]): P
   const createdParticipants: Participant[] = [];
   let currentSeed = details.participants.length + 1;
 
-  for (const name of validNames) {
-    if (existingNames.has(name.toLowerCase())) {
+  for (const entry of parsedEntries) {
+    if (existingNames.has(entry.name.toLowerCase())) {
       continue; // Skip exact duplicates
     }
-    existingNames.add(name.toLowerCase());
+    existingNames.add(entry.name.toLowerCase());
 
     const p: Participant = {
       id: `part_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       tournament_id: tournamentId,
       user_id: null,
-      display_name: name,
+      display_name: entry.name,
       participant_type: details.tournament.participant_type,
       seed: currentSeed++,
       registration_status: "confirmed",
+      roster: entry.roster,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -620,14 +680,14 @@ export function bulkAddParticipants(tournamentId: string, rawLines: string[]): P
   return createdParticipants;
 }
 
-export function updateParticipantName(participantId: string, newDisplayName: string): Participant {
+export function updateParticipant(
+  participantId: string,
+  updates: { display_name?: string; roster?: string[] }
+): Participant {
   const user = getCurrentUser();
   if (user.role === "participant") {
-    throw new Error("Participants are not authorized to rename participants.");
+    throw new Error("Participants are not authorized to update participants.");
   }
-
-  const trimmed = newDisplayName.trim();
-  if (!trimmed) throw new Error("Participant name cannot be empty.");
 
   const allParts: Participant[] = isBrowser()
     ? loadFromStorage(STORAGE_KEY_PARTICIPANTS, memoryStore.participants)
@@ -637,7 +697,19 @@ export function updateParticipantName(participantId: string, newDisplayName: str
   if (index === -1) throw new Error(`Participant ${participantId} not found.`);
 
   const oldName = allParts[index].display_name;
-  allParts[index].display_name = trimmed;
+  if (updates.display_name !== undefined) {
+    const trimmed = updates.display_name.trim();
+    if (!trimmed) throw new Error("Participant name cannot be empty.");
+    allParts[index].display_name = trimmed;
+  }
+
+  if (updates.roster !== undefined) {
+    const cleanedRoster = Array.isArray(updates.roster)
+      ? updates.roster.map((m) => m.trim()).filter((m) => m.length > 0)
+      : undefined;
+    allParts[index].roster = cleanedRoster && cleanedRoster.length > 0 ? cleanedRoster : undefined;
+  }
+
   allParts[index].updated_at = new Date().toISOString();
 
   if (isBrowser()) {
@@ -648,13 +720,17 @@ export function updateParticipantName(participantId: string, newDisplayName: str
 
   logActivity(
     allParts[index].tournament_id,
-    "Participant Renamed",
-    `Renamed "${oldName}" to "${trimmed}". Identity & match connections preserved.`
+    "Participant Updated",
+    `Updated competitor "${allParts[index].display_name}" (formerly "${oldName}").`
   );
 
   pushParticipantsToSupabase([allParts[index]]);
 
   return allParts[index];
+}
+
+export function updateParticipantName(participantId: string, newDisplayName: string): Participant {
+  return updateParticipant(participantId, { display_name: newDisplayName });
 }
 
 export function removeParticipant(participantId: string): void {

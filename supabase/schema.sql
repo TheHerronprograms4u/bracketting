@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.participants (
   participant_type TEXT NOT NULL CHECK (participant_type IN ('individual', 'team')),
   seed INT DEFAULT NULL,
   registration_status TEXT NOT NULL DEFAULT 'confirmed' CHECK (registration_status IN ('confirmed', 'pending', 'withdrawn')),
+  roster TEXT[] DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -90,6 +91,7 @@ ALTER TABLE public.tournaments ALTER COLUMN organizer_id TYPE TEXT;
 
 ALTER TABLE public.participants DROP CONSTRAINT IF EXISTS participants_user_id_fkey;
 ALTER TABLE public.participants ALTER COLUMN user_id TYPE TEXT;
+ALTER TABLE public.participants ADD COLUMN IF NOT EXISTS roster TEXT[] DEFAULT '{}';
 
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS bracket_type TEXT DEFAULT 'winners';
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS loser_next_match_id TEXT REFERENCES public.matches(id) ON DELETE SET NULL;

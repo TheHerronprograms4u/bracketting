@@ -50,6 +50,7 @@ export default function HomePage() {
   // Registration Modal State for quick user entry
   const [registeringTournament, setRegisteringTournament] = useState<Tournament | null>(null);
   const [participantName, setParticipantName] = useState("");
+  const [participantMembers, setParticipantMembers] = useState("");
   const [registrationError, setRegistrationError] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState("");
 
@@ -128,18 +129,32 @@ export default function HomePage() {
 
     const trimmed = participantName.trim();
     if (!trimmed) {
-      setRegistrationError("Please enter your name or team name.");
+      setRegistrationError(
+        registeringTournament.participant_type === "team"
+          ? "Please enter your team name."
+          : "Please enter your name."
+      );
       return;
     }
+
+    const members = registeringTournament.participant_type === "team" && participantMembers.trim()
+      ? participantMembers
+          .split(/[\n,;]/)
+          .map((m) => m.trim())
+          .filter((m) => m.length > 0)
+      : undefined;
 
     try {
       addParticipant(
         registeringTournament.id,
         trimmed,
-        registeringTournament.participant_type
+        registeringTournament.participant_type,
+        undefined,
+        members
       );
       setRegistrationSuccess(`Successfully registered "${trimmed}"!`);
       setParticipantName("");
+      setParticipantMembers("");
       refreshTournaments();
       setTimeout(() => {
         setRegisteringTournament(null);
@@ -474,21 +489,42 @@ export default function HomePage() {
                   className="w-full px-3 py-2 bg-arena-surface border border-arena-border focus:border-arena-accent rounded-xl text-white text-xs outline-none"
                   autoFocus
                 />
-
-                {registrationError && (
-                  <p className="text-xs text-arena-danger mt-2 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{registrationError}</span>
-                  </p>
-                )}
-
-                {registrationSuccess && (
-                  <p className="text-xs text-emerald-400 mt-2 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{registrationSuccess}</span>
-                  </p>
-                )}
               </div>
+
+              {registeringTournament.participant_type === "team" && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-arena-muted">
+                      Team Members / Roster (Optional)
+                    </label>
+                    <span className="text-[10px] text-arena-muted">Comma or line separated</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Alice, Bob, Charlie, David"
+                    value={participantMembers}
+                    onChange={(e) => setParticipantMembers(e.target.value)}
+                    className="w-full px-3 py-2 bg-arena-surface border border-arena-border focus:border-arena-accent rounded-xl text-white text-xs outline-none"
+                  />
+                  <p className="text-[11px] text-arena-muted mt-1">
+                    Member names will display in the roster below your team name (not in the match bracket).
+                  </p>
+                </div>
+              )}
+
+              {registrationError && (
+                <p className="text-xs text-arena-danger mb-4 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>{registrationError}</span>
+                </p>
+              )}
+
+              {registrationSuccess && (
+                <p className="text-xs text-emerald-400 mb-4 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{registrationSuccess}</span>
+                </p>
+              )}
 
               <div className="flex items-center justify-end gap-2">
                 <button
