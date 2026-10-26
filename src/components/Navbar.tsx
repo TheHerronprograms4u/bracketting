@@ -224,10 +224,11 @@ export const Navbar: React.FC = () => {
                 <div className="flex flex-col">
                   <span className="font-black text-lg tracking-wider text-white flex items-center gap-1.5">
                     ACCeSS ARENA
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-access-gold animate-pulse" />
                   </span>
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-arena-muted">
-                    Every Match Matters
+                  <span className="font-pixel text-[7.5px] uppercase tracking-wider text-access-gold/90 group-hover:text-access-gold group-hover:drop-shadow-[0_0_8px_rgba(255,184,0,0.8)] transition-all flex items-center gap-1 mt-0.5">
+                    <span className="w-1 h-1 bg-emerald-400 rounded-none inline-block animate-arcade-blink" />
+                    EVERY MATCH MATTERS
                   </span>
                 </div>
               </Link>

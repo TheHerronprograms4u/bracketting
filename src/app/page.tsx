@@ -14,6 +14,7 @@ import {
 import { Tournament, UserRole } from "@/types/tournament";
 import { Navbar } from "@/components/Navbar";
 import { PasswordModal } from "@/components/PasswordModal";
+import { PixelGlitchHeadline } from "@/components/PixelGlitchHeadline";
 import {
   Trophy,
   Users,
@@ -163,7 +164,7 @@ export default function HomePage() {
       )}
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-16 border-b border-arena-border/50">
+      <section className="relative overflow-hidden pt-12 pb-16 border-b border-arena-border/50 bg-cyber-grid">
         {/* Seamless Ambient Lighting Centered on Headline */}
         <div className="absolute top-6 sm:top-10 left-1/2 -translate-x-1/2 w-[900px] max-w-full h-[450px] bg-radial-glow pointer-events-none blur-2xl opacity-90" />
         <div className="absolute top-14 left-1/2 -translate-x-1/2 w-[550px] max-w-full h-[220px] bg-arena-highlight/15 rounded-full blur-[80px] pointer-events-none" />
@@ -174,9 +175,9 @@ export default function HomePage() {
             <span>ACCeSS ARENA — Bracketing Platform</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-[0_0_35px_rgba(255,184,0,0.22)]">
-            EVERY MATCH <span className="text-access-gold drop-shadow-[0_0_25px_rgba(255,184,0,0.4)]">MATTERS.</span>
-          </h1>
+          <div className="flex justify-center mb-4">
+            <PixelGlitchHeadline />
+          </div>
 
           <p className="max-w-2xl mx-auto text-sm sm:text-base text-arena-muted mb-8 leading-relaxed">
             The next-generation competitive bracket engine. Register any participant
@@ -221,45 +222,45 @@ export default function HomePage() {
 
           {/* Key Platform Highlights */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-14 text-left">
-            <div className="p-4 rounded-2xl bg-arena-card/80 border border-arena-border">
+            <div className="relative p-4 rounded-2xl bg-arena-card/80 border border-arena-border hover:border-access-gold/50 hover:shadow-[0_0_20px_rgba(255,184,0,0.15)] hover:-translate-y-0.5 transition-all duration-300 group">
               <div className="text-arena-highlight text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5" />
+                <Users className="w-3.5 h-3.5 text-access-gold group-hover:scale-110 transition-transform" />
                 <span>Arbitrary N</span>
               </div>
-              <div className="text-sm font-semibold text-white">Dynamic Sizing</div>
+              <div className="text-sm font-semibold text-white group-hover:text-access-goldLight transition-colors">Dynamic Sizing</div>
               <p className="text-[11px] text-arena-muted mt-1">
                 Any valid count (2, 3, 5, 7, 13, 27, 50, 100+). No forced presets.
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-arena-card/80 border border-arena-border">
+            <div className="relative p-4 rounded-2xl bg-arena-card/80 border border-arena-border hover:border-access-gold/50 hover:shadow-[0_0_20px_rgba(255,184,0,0.15)] hover:-translate-y-0.5 transition-all duration-300 group">
               <div className="text-arena-highlight text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5" />
+                <Layers className="w-3.5 h-3.5 text-access-gold group-hover:scale-110 transition-transform" />
                 <span>Pure Binary Trees</span>
               </div>
-              <div className="text-sm font-semibold text-white">Smart Bye Allocation</div>
+              <div className="text-sm font-semibold text-white group-hover:text-access-goldLight transition-colors">Smart Bye Allocation</div>
               <p className="text-[11px] text-arena-muted mt-1">
                 Top seeds advance smoothly into Round 2 without fake opponents.
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-arena-card/80 border border-arena-border">
+            <div className="relative p-4 rounded-2xl bg-arena-card/80 border border-arena-border hover:border-access-gold/50 hover:shadow-[0_0_20px_rgba(255,184,0,0.15)] hover:-translate-y-0.5 transition-all duration-300 group">
               <div className="text-arena-highlight text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 text-access-gold group-hover:scale-110 transition-transform" />
                 <span>Cinematic FX</span>
               </div>
-              <div className="text-sm font-semibold text-white">Winner Destroys Loser</div>
+              <div className="text-sm font-semibold text-white group-hover:text-access-goldLight transition-colors">Winner Destroys Loser</div>
               <p className="text-[11px] text-arena-muted mt-1">
                 Winner card strikes loser card into geometric digital shards.
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-arena-card/80 border border-arena-border">
+            <div className="relative p-4 rounded-2xl bg-arena-card/80 border border-arena-border hover:border-access-gold/50 hover:shadow-[0_0_20px_rgba(255,184,0,0.15)] hover:-translate-y-0.5 transition-all duration-300 group">
               <div className="text-arena-highlight text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5" />
+                <Shield className="w-3.5 h-3.5 text-access-gold group-hover:scale-110 transition-transform" />
                 <span>Data Integrity</span>
               </div>
-              <div className="text-sm font-semibold text-white">Safe Corrections</div>
+              <div className="text-sm font-semibold text-white group-hover:text-access-goldLight transition-colors">Safe Corrections</div>
               <p className="text-[11px] text-arena-muted mt-1">
                 Automatic recalculation and safe invalidation of downstream matches.
               </p>
@@ -351,80 +352,89 @@ export default function HomePage() {
             filteredTournaments.map((t) => (
               <div
                 key={t.id}
-                className="flex flex-col justify-between rounded-2xl bg-arena-card border border-arena-border hover:border-arena-borderLight p-6 transition duration-200 shadow-sm group"
+                className="relative flex flex-col justify-between rounded-2xl bg-arena-card border border-arena-border hover:border-access-gold/50 hover:shadow-[0_8px_30px_rgba(255,184,0,0.12)] hover:-translate-y-1 p-6 transition-all duration-300 group overflow-hidden"
               >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      t.status === "completed"
-                        ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                        : t.status === "in_progress"
-                        ? "bg-arena-accent/15 text-arena-highlight border border-arena-accent/30"
-                        : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                    }`}
-                  >
-                    {t.status.replace("_", " ")}
-                  </span>
+                {/* Top edge glow strip */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-access-gold/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  <span className="text-[10px] uppercase font-bold text-arena-muted">
-                    {t.participant_type}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-white group-hover:text-arena-highlight transition line-clamp-1 mb-2">
-                  {t.name}
-                </h3>
-
-                <p className="text-xs text-arena-muted line-clamp-2 mb-6">
-                  {t.description || (t.format === "double_elimination" ? "Double elimination tournament." : "Single elimination tournament.")}
-                </p>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between text-xs py-3 border-t border-arena-border/50 text-arena-muted mb-4">
-                  <span>
-                    Format: {t.format === "double_elimination" ? "Double Elimination" : "Single Elimination"}
-                  </span>
-                  <span>
-                    Cap: {t.capacity_limit ? `${t.capacity_limit} max` : "Unlimited"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/tournament/${t.id}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-arena-elevated border border-arena-border hover:border-arena-accent text-white text-xs font-semibold transition"
-                  >
-                    <span>View Bracket</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-arena-accent" />
-                  </Link>
-
-                  {t.registration_status === "open" && t.status !== "completed" && (
-                    <button
-                      onClick={() => setRegisteringTournament(t)}
-                      className="px-3.5 py-2.5 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold transition shadow-glow-sm"
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        t.status === "completed"
+                          ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                          : t.status === "in_progress"
+                          ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-[0_0_12px_rgba(0,229,255,0.25)]"
+                          : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                      }`}
                     >
-                      Register
-                    </button>
-                  )}
+                      {t.status === "in_progress" && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping inline-block" />
+                      )}
+                      {t.status === "completed" && (
+                        <Trophy className="w-3 h-3 text-amber-400" />
+                      )}
+                      <span>{t.status.replace("_", " ")}</span>
+                    </span>
 
-                  {isStaff && t.status === "completed" && (
-                    <button
-                      onClick={() => {
-                        setDeleteError("");
-                        setTournamentToDelete(t);
-                      }}
-                      className="p-2.5 rounded-xl bg-arena-surface border border-arena-border hover:border-arena-danger/60 hover:bg-arena-danger/10 text-arena-muted hover:text-arena-danger transition"
-                      title="Delete completed tournament"
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-arena-surface border border-arena-border text-arena-muted">
+                      {t.participant_type}
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-white group-hover:text-access-goldLight transition-colors line-clamp-1 mb-2">
+                    {t.name}
+                  </h3>
+
+                  <p className="text-xs text-arena-muted line-clamp-2 mb-6">
+                    {t.description || (t.format === "double_elimination" ? "Double elimination tournament." : "Single elimination tournament.")}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between text-xs py-3 border-t border-arena-border/50 text-arena-muted mb-4 font-mono">
+                    <span className="text-[11px]">
+                      {t.format === "double_elimination" ? "Double Elim" : "Single Elim"}
+                    </span>
+                    <span className="text-[11px] text-arena-text">
+                      Cap: {t.capacity_limit ? `${t.capacity_limit} max` : "Unlimited"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/tournament/${t.id}`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-arena-elevated border border-arena-border hover:border-access-gold hover:shadow-glow-sm text-white text-xs font-semibold transition-all duration-200"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                      <span>View Bracket</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-access-gold group-hover:translate-x-1 transition-transform" />
+                    </Link>
+
+                    {t.registration_status === "open" && t.status !== "completed" && (
+                      <button
+                        onClick={() => setRegisteringTournament(t)}
+                        className="px-3.5 py-2.5 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold transition shadow-glow-sm"
+                      >
+                        Register
+                      </button>
+                    )}
+
+                    {isStaff && t.status === "completed" && (
+                      <button
+                        onClick={() => {
+                          setDeleteError("");
+                          setTournamentToDelete(t);
+                        }}
+                        className="p-2.5 rounded-xl bg-arena-surface border border-arena-border hover:border-arena-danger/60 hover:bg-arena-danger/10 text-arena-muted hover:text-arena-danger transition"
+                        title="Delete completed tournament"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            ))
         )}
       </div>
       </section>

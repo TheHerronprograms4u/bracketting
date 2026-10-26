@@ -40,6 +40,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          "var(--font-geist-sans)",
           "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
@@ -47,11 +48,23 @@ const config: Config = {
           "Roboto",
           "sans-serif",
         ],
+        mono: [
+          "var(--font-geist-mono)",
+          "monospace",
+        ],
+        pixel: [
+          "var(--font-pixel)",
+          "'Press Start 2P'",
+          "'Courier New'",
+          "Courier",
+          "monospace",
+        ],
       },
       boxShadow: {
         glow: "0 0 35px -5px rgba(255, 184, 0, 0.4)",
         "glow-sm": "0 0 15px -3px rgba(255, 184, 0, 0.3)",
         "glow-gold": "0 0 20px -3px rgba(255, 184, 0, 0.5)",
+        "glow-cyan": "0 0 25px -3px rgba(0, 229, 255, 0.6)",
         "glow-ocean": "0 0 30px -5px rgba(26, 58, 138, 0.5)",
         "glow-danger": "0 0 30px -5px rgba(248, 113, 113, 0.3)",
         "glow-success": "0 0 30px -5px rgba(56, 189, 248, 0.3)",

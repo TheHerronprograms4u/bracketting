@@ -239,3 +239,36 @@ export function playPartyFanfare(isMuted: boolean = false): () => void {
     }
   };
 }
+
+/**
+ * 8-Bit Pixel Glitch / Arcade Zap Sound.
+ * Emits a punchy, retro chiptune glitch arpeggio using square waves.
+ */
+export function playPixelGlitchSound(isMuted: boolean = false): void {
+  if (isMuted) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = "square"; // Classic 8-bit NES/Arcade square wave
+
+  // Arpeggiate glitch frequencies rapidly
+  osc.frequency.setValueAtTime(320, now);
+  osc.frequency.setValueAtTime(840, now + 0.02);
+  osc.frequency.setValueAtTime(560, now + 0.04);
+  osc.frequency.setValueAtTime(1280, now + 0.06);
+  osc.frequency.setValueAtTime(420, now + 0.09);
+
+  gain.gain.setValueAtTime(0.18, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(now);
+  osc.stop(now + 0.13);
+}
+

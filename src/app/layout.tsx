@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -11,6 +12,12 @@ const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
   weight: "100 900",
+});
+const pixelFont = Press_Start_2P({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-pixel",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased text-arena-text min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} font-sans antialiased text-arena-text min-h-screen`}
       >
         {children}
       </body>
