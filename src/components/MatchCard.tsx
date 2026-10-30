@@ -6,7 +6,6 @@ import {
   Trophy,
   CheckCircle2,
   Clock,
-  Sparkles,
   Edit2,
   Check,
   X,
@@ -73,47 +72,53 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   return (
     <div
       data-match-id={match.id}
-      className={`relative w-64 md:w-72 rounded-xl transition-all duration-200 select-none ${
+      data-is-championship={isChampionship ? "true" : "false"}
+      className={`group relative w-64 md:w-72 rounded-xl transition-all duration-300 select-none overflow-hidden backdrop-blur-md shadow-md ${
         isChampionship
-          ? "border-2 border-amber-500/60 shadow-[0_0_25px_-5px_rgba(245,158,11,0.25)] bg-gradient-to-b from-arena-elevated to-arena-card"
+          ? "border-2 border-amber-500/80 shadow-[0_0_25px_-5px_rgba(245,158,11,0.3)] bg-gradient-to-b from-arena-card via-arena-elevated to-arena-card"
           : isCompleted
-          ? "border border-arena-border bg-arena-card/90"
+          ? "border border-arena-border/80 bg-arena-card/90 hover:border-arena-borderLight"
           : isReady
-          ? "border border-arena-accent/40 hover:border-arena-accent shadow-glow-sm bg-arena-elevated"
+          ? "border-2 border-arena-accent/90 shadow-glow-sm bg-arena-card/95 ring-1 ring-arena-accent/30 hover:shadow-glow hover:border-arena-accent"
           : isBye
-          ? "border border-arena-border/50 bg-arena-surface/40 opacity-75"
-          : "border border-arena-border/40 bg-arena-surface/50 opacity-60"
+          ? "border border-arena-border/40 bg-arena-surface/40 opacity-75"
+          : "border border-arena-border/30 bg-arena-surface/50 opacity-60"
       }`}
     >
       {/* Top Header Label */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-arena-border/40 text-[10px] font-semibold text-arena-muted">
-        <span className="flex items-center gap-1">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-arena-border/40 text-[10px] font-mono font-semibold text-arena-muted bg-arena-surface/50">
+        <span className="flex items-center gap-1.5 tracking-wider">
           {isChampionship && <Trophy className="w-3 h-3 text-amber-400" />}
-          <span>
+          <span className={isChampionship ? "text-amber-400 font-bold" : ""}>
             {isChampionship ? "CHAMPIONSHIP" : `MATCH ${match.match_position + 1}`}
           </span>
+          {match.bracket_type && match.bracket_type !== "grand_finals" && (
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-arena-elevated/80 text-arena-muted uppercase">
+              {match.bracket_type === "winners" ? "Upper" : "Lower"}
+            </span>
+          )}
         </span>
 
         {/* Status Badge */}
         {isCompleted && (
-          <span className="text-arena-highlight flex items-center gap-1 font-bold">
+          <span className="text-arena-highlight flex items-center gap-1 font-bold text-[10px]">
             <CheckCircle2 className="w-3 h-3 text-arena-accent" />
             <span>FINAL</span>
           </span>
         )}
         {isReady && (
-          <span className="text-emerald-400 flex items-center gap-1 animate-pulse font-bold">
-            <Sparkles className="w-3 h-3" />
+          <span className="text-emerald-400 flex items-center gap-1.5 font-bold text-[10px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
             <span>READY</span>
           </span>
         )}
         {isBye && (
-          <span className="text-arena-muted font-bold tracking-wider">
+          <span className="text-arena-muted font-bold tracking-wider text-[10px]">
             BYE ADVANCE
           </span>
         )}
         {isPending && (
-          <span className="text-arena-muted/70 flex items-center gap-1">
+          <span className="text-arena-muted/70 flex items-center gap-1 text-[10px]">
             <Clock className="w-3 h-3" />
             <span>WAITING</span>
           </span>
@@ -124,19 +129,27 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       <div
         onClick={() => handleSlotClick(participantA, participantB)}
         className={`relative flex items-center justify-between px-3 py-2.5 transition-colors border-b border-arena-border/30 ${
-          isReady && isOrganizer ? "cursor-pointer hover:bg-arena-accent/10" : ""
+          isReady && isOrganizer
+            ? "cursor-pointer hover:bg-arena-accent/15 group/slot active:scale-[0.99]"
+            : ""
         } ${
           match.winner_id === participantA?.id
-            ? "bg-arena-accent/15 text-white font-bold"
+            ? "bg-arena-accent/15 text-white font-bold border-l-2 border-l-arena-accent"
             : isCompleted && participantA
-            ? "opacity-50 text-arena-muted line-through"
+            ? "opacity-45 text-arena-muted line-through"
             : ""
         }`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
           {/* Seed badge */}
           {participantA && (
-            <span className="shrink-0 w-5 h-5 rounded bg-arena-surface border border-arena-border flex items-center justify-center text-[10px] font-bold text-arena-muted">
+            <span
+              className={`shrink-0 w-5 h-5 rounded border flex items-center justify-center text-[10px] font-mono font-bold ${
+                match.winner_id === participantA?.id
+                  ? "bg-arena-accent/25 border-arena-accent/50 text-arena-highlight"
+                  : "bg-arena-surface border-arena-border text-arena-muted"
+              }`}
+            >
               {participantA.seed ?? "-"}
             </span>
           )}
@@ -215,19 +228,27 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       <div
         onClick={() => handleSlotClick(participantB, participantA)}
         className={`relative flex items-center justify-between px-3 py-2.5 transition-colors ${
-          isReady && isOrganizer ? "cursor-pointer hover:bg-arena-accent/10" : ""
+          isReady && isOrganizer
+            ? "cursor-pointer hover:bg-arena-accent/15 group/slot active:scale-[0.99]"
+            : ""
         } ${
           match.winner_id === participantB?.id
-            ? "bg-arena-accent/15 text-white font-bold"
+            ? "bg-arena-accent/15 text-white font-bold border-l-2 border-l-arena-accent"
             : isCompleted && participantB
-            ? "opacity-50 text-arena-muted line-through"
+            ? "opacity-45 text-arena-muted line-through"
             : ""
         }`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
           {/* Seed badge */}
           {participantB && (
-            <span className="shrink-0 w-5 h-5 rounded bg-arena-surface border border-arena-border flex items-center justify-center text-[10px] font-bold text-arena-muted">
+            <span
+              className={`shrink-0 w-5 h-5 rounded border flex items-center justify-center text-[10px] font-mono font-bold ${
+                match.winner_id === participantB?.id
+                  ? "bg-arena-accent/25 border-arena-accent/50 text-arena-highlight"
+                  : "bg-arena-surface border-arena-border text-arena-muted"
+              }`}
+            >
               {participantB.seed ?? "-"}
             </span>
           )}

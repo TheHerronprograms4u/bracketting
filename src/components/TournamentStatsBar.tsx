@@ -53,6 +53,11 @@ export const TournamentStatsBar: React.FC<TournamentStatsBarProps> = ({
 
   const isBracketGenerated = matches.length > 0;
   const canGenerate = participants.length >= 2;
+  const isDoubleElim =
+    tournament.format === "double_elimination" ||
+    (tournament.format || "").toLowerCase().includes("double");
+  const formatDisplayName = isDoubleElim ? "Double-Elimination" : "Single-Elimination";
+  const formatLowerName = isDoubleElim ? "double-elimination" : "single-elimination";
 
   return (
     <div className="w-full space-y-4">
@@ -161,29 +166,42 @@ export const TournamentStatsBar: React.FC<TournamentStatsBarProps> = ({
 
       {/* Organizer Contextual Controls Banner */}
       {isOrganizer && (
-        <div className="p-4 rounded-2xl bg-arena-elevated border border-arena-border flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-arena-accent" />
-            <span className="text-xs text-arena-text font-medium">
-              {!isBracketGenerated
-                ? `Ready to generate single-elimination bracket for ${participants.length} competitors.`
-                : tournament.status === "completed"
-                ? "Tournament concluded. Champion determined."
-                : "Active tournament in progress. Click any ready matchup to advance winners."}
-            </span>
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-arena-card via-arena-elevated to-arena-card border border-arena-borderLight/60 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="w-7 h-7 rounded-lg bg-arena-accent/15 border border-arena-accent/30 flex items-center justify-center text-arena-accent shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-extrabold uppercase tracking-wider border ${
+                  isDoubleElim
+                    ? "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                    : "bg-arena-surface border-arena-border text-arena-muted"
+                }`}
+              >
+                {formatDisplayName}
+              </span>
+              <span className="text-xs text-arena-text font-medium">
+                {!isBracketGenerated
+                  ? `Ready to generate ${formatLowerName} bracket for ${participants.length} competitors.`
+                  : tournament.status === "completed"
+                  ? "Tournament concluded. Champion determined."
+                  : "Active tournament in progress. Click any ready matchup to advance winners."}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end shrink-0">
             {!isBracketGenerated ? (
               <button
                 onClick={onGenerateBracket}
                 disabled={!canGenerate}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-arena-accent hover:bg-arena-accentHover text-white text-xs font-bold transition shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-arena-accent to-arena-highlight hover:brightness-110 text-arena-bg text-xs font-black uppercase tracking-wider transition shadow-glow disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Play className="w-3.5 h-3.5" />
+                <Play className="w-3.5 h-3.5 fill-current" />
                 <span>
                   {canGenerate
-                    ? `Generate Dynamic Bracket (${participants.length})`
+                    ? `Generate ${isDoubleElim ? "Double" : "Single"} Elim Bracket (${participants.length})`
                     : "Need ≥ 2 Competitors"}
                 </span>
               </button>

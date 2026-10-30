@@ -295,7 +295,7 @@ export default function TournamentDetailPage() {
       )}
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-4">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
@@ -308,12 +308,12 @@ export default function TournamentDetailPage() {
 
           <div className="flex items-center gap-2">
             <span
-              className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
+              className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold uppercase tracking-wider ${
                 tournament.status === "completed"
-                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                  ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
                   : tournament.status === "in_progress"
                   ? "bg-arena-accent/15 text-arena-highlight border border-arena-accent/30"
-                  : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                  : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
               }`}
             >
               {tournament.status.replace("_", " ")}
@@ -321,24 +321,24 @@ export default function TournamentDetailPage() {
           </div>
         </div>
 
-        {/* Tournament Hero Card */}
-        <div className="relative rounded-3xl bg-gradient-to-br from-arena-card via-arena-elevated to-arena-bg border border-arena-border p-6 md:p-8 shadow-sm overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-radial-glow pointer-events-none" />
+        {/* Tournament Hero Card - Streamlined Header Focus */}
+        <div className="relative rounded-2xl bg-gradient-to-br from-arena-card via-arena-elevated to-arena-bg border border-arena-border p-5 md:p-6 shadow-sm overflow-hidden">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-radial-glow pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2 text-xs font-bold text-arena-highlight uppercase tracking-widest">
-                <Shield className="w-3.5 h-3.5" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-arena-highlight uppercase tracking-widest">
+                <Shield className="w-3.5 h-3.5 text-arena-accent" />
                 <span>
                   {tournament.format === "double_elimination"
                     ? "Double Elimination Championship"
                     : "Single Elimination Championship"}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight">
                 {tournament.name}
               </h1>
-              <p className="text-sm text-arena-muted line-clamp-2">
+              <p className="text-xs md:text-sm text-arena-muted line-clamp-1">
                 {tournament.description || "Every Match Matters in the Arena."}
               </p>
             </div>
@@ -347,16 +347,16 @@ export default function TournamentDetailPage() {
             {champion && (
               <div
                 onClick={() => setIsFinaleOpen(true)}
-                className="cursor-pointer flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 to-yellow-500/10 border border-amber-500/40 hover:border-amber-500 transition shadow-lg group"
+                className="cursor-pointer flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 to-yellow-500/10 border border-amber-500/40 hover:border-amber-500 transition shadow-lg group shrink-0"
               >
-                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
-                  <Trophy className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+                  <Trophy className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-amber-400 font-mono">
                     TOURNAMENT CHAMPION
                   </div>
-                  <div className="text-base font-extrabold text-white">
+                  <div className="text-sm font-extrabold text-white">
                     {champion.display_name}
                   </div>
                 </div>
