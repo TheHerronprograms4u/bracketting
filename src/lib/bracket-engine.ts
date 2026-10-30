@@ -395,19 +395,172 @@ export function generateBracket(
     ...(grandFinalsMatch ? [grandFinalsMatch] : []),
   ];
 
+  const resolvedMatches = resolveBracketByes(allMatches);
+
   const competitiveMatchesCount =
     format === "double_elimination"
-      ? allMatches.filter((m) => !m.is_bye).length
+      ? resolvedMatches.filter((m) => !m.is_bye).length
       : N - 1;
 
   return {
-    matches: allMatches,
+    matches: resolvedMatches,
     participants: seededParticipants,
     totalRounds: totalWinnersRounds,
     logicalCapacity: S,
     byeCount,
     competitiveMatchesCount,
   };
+}
+
+function canMatchSlotBeFilled(
+  match: Match,
+  slot: "participant_a" | "participant_b",
+  matchesMap: Map<string, Match>,
+  visited: Set<string> = new Set()
+): boolean {
+  if (slot === "participant_a" && match.participant_a_id) return true;
+  if (slot === "participant_b" && match.participant_b_id) return true;
+
+  const key = `${match.id}:${slot}`;
+  if (visited.has(key)) return false;
+  visited.add(key);
+
+  let feederMatch: Match | undefined;
+  let isFromLoser = false;
+
+  const allValues = Array.from(matchesMap.values());
+  for (const m of allValues) {
+    if (m.next_match_id === match.id && m.next_match_slot === slot) {
+      feederMatch = m;
+      isFromLoser = false;
+      break;
+    }
+    if (m.loser_next_match_id === match.id && m.loser_next_match_slot === slot) {
+      feederMatch = m;
+      isFromLoser = true;
+      break;
+    }
+  }
+
+  if (!feederMatch) {
+    return false;
+  }
+
+  if (isFromLoser) {
+    // A bye match NEVER produces a loser to route into the losers bracket
+    if (feederMatch.is_bye) {
+      return false;
+    }
+    return true;
+  }
+
+  // If feeder is routing its winner (via next_match_id):
+  if (feederMatch.is_bye && !feederMatch.winner_id) {
+    const fCanA = canMatchSlotBeFilled(feederMatch, "participant_a", matchesMap, visited);
+    const fCanB = canMatchSlotBeFilled(feederMatch, "participant_b", matchesMap, visited);
+    if (!fCanA && !fCanB) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export function resolveBracketByes(matches: Match[]): Match[] {
+  const matchesMap = new Map<string, Match>();
+  matches.forEach((m) => matchesMap.set(m.id, { ...m }));
+
+  let changed = true;
+  let iterations = 0;
+
+  while (changed && iterations < 30) {
+    changed = false;
+    iterations++;
+
+    const currentValues = Array.from(matchesMap.values());
+    for (const match of currentValues) {
+      if (match.status === "completed") continue;
+
+      const canA = canMatchSlotBeFilled(match, "participant_a", matchesMap);
+      const canB = canMatchSlotBeFilled(match, "participant_b", matchesMap);
+
+      if (!canA && !canB) {
+        if (!match.is_bye || match.status !== "bye") {
+          match.is_bye = true;
+          match.status = "bye";
+          match.winner_id = null;
+          match.participant_a_id = null;
+          match.participant_b_id = null;
+          match.completed_at = new Date().toISOString();
+          changed = true;
+        }
+      } else if (canA && !canB) {
+        if (!match.is_bye && match.participant_a_id) {
+          match.is_bye = true;
+          changed = true;
+        }
+        if (match.participant_a_id) {
+          if (match.status !== "bye" || match.winner_id !== match.participant_a_id) {
+            match.status = "bye";
+            match.is_bye = true;
+            match.winner_id = match.participant_a_id;
+            match.completed_at = new Date().toISOString();
+            if (match.next_match_id && match.next_match_slot) {
+              const nextM = matchesMap.get(match.next_match_id);
+              if (nextM) {
+                if (match.next_match_slot === "participant_a") {
+                  nextM.participant_a_id = match.participant_a_id;
+                } else {
+                  nextM.participant_b_id = match.participant_a_id;
+                }
+              }
+            }
+            changed = true;
+          }
+        }
+      } else if (!canA && canB) {
+        if (!match.is_bye && match.participant_b_id) {
+          match.is_bye = true;
+          changed = true;
+        }
+        if (match.participant_b_id) {
+          if (match.status !== "bye" || match.winner_id !== match.participant_b_id) {
+            match.status = "bye";
+            match.is_bye = true;
+            match.winner_id = match.participant_b_id;
+            match.completed_at = new Date().toISOString();
+            if (match.next_match_id && match.next_match_slot) {
+              const nextM = matchesMap.get(match.next_match_id);
+              if (nextM) {
+                if (match.next_match_slot === "participant_a") {
+                  nextM.participant_a_id = match.participant_b_id;
+                } else {
+                  nextM.participant_b_id = match.participant_b_id;
+                }
+              }
+            }
+            changed = true;
+          }
+        }
+      } else {
+        // Both slots can be filled
+        match.is_bye = false;
+        if (match.participant_a_id && match.participant_b_id) {
+          if (match.status !== "ready") {
+            match.status = "ready";
+            changed = true;
+          }
+        } else {
+          if (match.status !== "pending") {
+            match.status = "pending";
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  return Array.from(matchesMap.values());
 }
 
 /**
@@ -555,8 +708,10 @@ export function advanceMatchWinner(
     }
   }
 
+  const resolvedMatches = resolveBracketByes(newMatches);
+
   return {
-    updatedMatches: newMatches,
+    updatedMatches: resolvedMatches,
     isChampionshipWin,
     nextMatchId: matchToUpdate.next_match_id,
   };
@@ -635,9 +790,10 @@ export function correctMatchWinner(
   }
 
   const isChampionshipWin = matchToUpdate.next_match_id === null;
+  const resolvedMatches = resolveBracketByes(newMatches);
 
   return {
-    updatedMatches: newMatches,
+    updatedMatches: resolvedMatches,
     invalidatedMatchIds,
     isChampionshipWin,
   };

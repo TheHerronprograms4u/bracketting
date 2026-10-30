@@ -11,6 +11,7 @@ import {
   generateBracket,
   advanceMatchWinner,
   correctMatchWinner as engineCorrectMatchWinner,
+  resolveBracketByes,
 } from "./bracket-engine";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase";
 
@@ -545,7 +546,35 @@ export function getTournamentById(id: string): TournamentDetails | null {
     : memoryStore.logs;
 
   const participants = allParticipants.filter((p) => p.tournament_id === id);
-  const matches = allMatches.filter((m) => m.tournament_id === id);
+  const rawMatches = allMatches.filter((m) => m.tournament_id === id);
+  let matches = rawMatches;
+
+  if (tournament.format === "double_elimination" && rawMatches.length > 0) {
+    matches = resolveBracketByes(rawMatches);
+    // If any status, is_bye, or participant slot changed, self-heal and persist
+    const hasChanges = matches.some((m, idx) => {
+      const orig = rawMatches[idx];
+      return (
+        orig &&
+        (orig.status !== m.status ||
+          orig.is_bye !== m.is_bye ||
+          orig.winner_id !== m.winner_id ||
+          orig.participant_a_id !== m.participant_a_id ||
+          orig.participant_b_id !== m.participant_b_id)
+      );
+    });
+
+    if (hasChanges) {
+      const otherMatches = allMatches.filter((m) => m.tournament_id !== id);
+      const updatedAllMatches = [...otherMatches, ...matches];
+      if (isBrowser()) {
+        saveToStorage(STORAGE_KEY_MATCHES, updatedAllMatches);
+      } else {
+        memoryStore.matches = updatedAllMatches;
+      }
+      pushMatchesToSupabase(matches);
+    }
+  }
   const activity_logs = allLogs
     .filter((l) => l.tournament_id === id)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
