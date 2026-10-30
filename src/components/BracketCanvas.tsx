@@ -83,7 +83,10 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
     return counts;
   }, [matches]);
 
-  // Filter matches according to selected branch
+  // View All double elimination flag
+  const isViewAllDoubleElim = isDoubleElim && selectedBranch === "all";
+
+  // Filter matches according to selected branch when in single-branch view
   const filteredMatches = useMemo(() => {
     if (!isDoubleElim || selectedBranch === "all") {
       return matches;
@@ -91,9 +94,9 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
     return matches.filter((m) => (m.bracket_type || "winners") === selectedBranch);
   }, [matches, isDoubleElim, selectedBranch]);
 
-  // Group filtered matches by round number
+  // Group filtered matches by round number for single-branch or single-elim views
   const rounds = useMemo(() => {
-    if (filteredMatches.length === 0) return [];
+    if (isViewAllDoubleElim || filteredMatches.length === 0) return [];
     const maxRound = Math.max(...filteredMatches.map((m) => m.round_number));
     const roundList: {
       roundNumber: number;
@@ -118,7 +121,73 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
       }
     }
     return roundList;
-  }, [filteredMatches, format]);
+  }, [filteredMatches, format, isViewAllDoubleElim]);
+
+  // Double Elimination Upper (Winners) rounds for "View All"
+  const winnersRounds = useMemo(() => {
+    if (!isViewAllDoubleElim) return [];
+    const wMatches = matches.filter((m) => (m.bracket_type || "winners") === "winners");
+    if (wMatches.length === 0) return [];
+    const maxRound = Math.max(...wMatches.map((m) => m.round_number));
+    const list: {
+      roundNumber: number;
+      name: string;
+      bracketType: BracketBranch;
+      matches: Match[];
+    }[] = [];
+
+    for (let r = 1; r <= maxRound; r++) {
+      const rm = wMatches
+        .filter((m) => m.round_number === r)
+        .sort((a, b) => a.match_position - b.match_position);
+      if (rm.length > 0) {
+        list.push({
+          roundNumber: r,
+          name: getRoundName(r, maxRound, "winners", format),
+          bracketType: "winners",
+          matches: rm,
+        });
+      }
+    }
+    return list;
+  }, [matches, isViewAllDoubleElim, format]);
+
+  // Double Elimination Lower (Losers) rounds for "View All"
+  const losersRounds = useMemo(() => {
+    if (!isViewAllDoubleElim) return [];
+    const lMatches = matches.filter((m) => m.bracket_type === "losers");
+    if (lMatches.length === 0) return [];
+    const maxRound = Math.max(...lMatches.map((m) => m.round_number));
+    const list: {
+      roundNumber: number;
+      name: string;
+      bracketType: BracketBranch;
+      matches: Match[];
+    }[] = [];
+
+    for (let r = 1; r <= maxRound; r++) {
+      const rm = lMatches
+        .filter((m) => m.round_number === r)
+        .sort((a, b) => a.match_position - b.match_position);
+      if (rm.length > 0) {
+        list.push({
+          roundNumber: r,
+          name: getRoundName(r, maxRound, "losers", format),
+          bracketType: "losers",
+          matches: rm,
+        });
+      }
+    }
+    return list;
+  }, [matches, isViewAllDoubleElim, format]);
+
+  // Double Elimination Grand Finals matches for "View All"
+  const grandFinalsMatches = useMemo(() => {
+    if (!isViewAllDoubleElim) return [];
+    return matches
+      .filter((m) => m.bracket_type === "grand_finals")
+      .sort((a, b) => a.match_position - b.match_position);
+  }, [matches, isViewAllDoubleElim]);
 
   // Check if board fits entirely within viewport for auto-centering
   const checkCentering = useCallback(() => {
@@ -198,7 +267,15 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
       clearTimeout(timer);
       window.removeEventListener("resize", updateConnectors);
     };
-  }, [updateConnectors, checkCentering, rounds, zoomLevel]);
+  }, [
+    updateConnectors,
+    checkCentering,
+    rounds,
+    winnersRounds,
+    losersRounds,
+    grandFinalsMatches,
+    zoomLevel,
+  ]);
 
   // When changing branches or initially loaded, auto-center view
   useEffect(() => {
@@ -214,6 +291,75 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
   const handleResetZoom = () => {
     setZoomLevel(1);
     setTimeout(handleCenterView, 50);
+  };
+
+  // Render a clean round column with header and match cards
+  const renderRoundColumn = (round: {
+    roundNumber: number;
+    name: string;
+    bracketType: BracketBranch;
+    matches: Match[];
+  }) => {
+    const isGrandFinals = round.bracketType === "grand_finals";
+    const isLosersBranch = round.bracketType === "losers";
+
+    return (
+      <div
+        key={`${round.bracketType}_${round.roundNumber}`}
+        className="flex flex-col relative z-10 shrink-0"
+      >
+        {/* Round Header */}
+        <div className="mb-6 flex flex-col items-center">
+          <div
+            className={`px-4 py-1.5 rounded-full border text-xs font-extrabold uppercase tracking-widest shadow-md flex items-center gap-1.5 backdrop-blur-sm ${
+              isGrandFinals
+                ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
+                : isLosersBranch
+                ? "bg-red-500/10 border-red-500/30 text-red-400"
+                : "bg-arena-elevated/80 border-arena-border text-arena-text"
+            }`}
+          >
+            {isGrandFinals ? (
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+            ) : isLosersBranch ? (
+              <Flame className="w-3.5 h-3.5 text-red-400" />
+            ) : (
+              <Shield className="w-3.5 h-3.5 text-arena-accent" />
+            )}
+            <span>{round.name}</span>
+          </div>
+          <span className="text-[10px] text-arena-muted font-mono font-semibold mt-1.5">
+            {round.matches.length} {round.matches.length === 1 ? "Match" : "Matches"}
+          </span>
+        </div>
+
+        {/* Match Cards spaced evenly vertically */}
+        <div className="flex-1 flex flex-col justify-around gap-8 md:gap-12 min-h-0">
+          {round.matches.map((match) => (
+            <MatchCard
+              key={match.id}
+              match={match}
+              participantA={
+                match.participant_a_id
+                  ? participantMap.get(match.participant_a_id) || null
+                  : null
+              }
+              participantB={
+                match.participant_b_id
+                  ? participantMap.get(match.participant_b_id) || null
+                  : null
+              }
+              hasScoring={hasScoring}
+              currentUserRole={currentUserRole}
+              isChampionship={isGrandFinals || (!isDoubleElim && round.roundNumber === rounds.length)}
+              onSelectWinner={onSelectWinner}
+              onCorrectResult={onCorrectResult}
+              onRenameParticipant={onRenameParticipant}
+            />
+          ))}
+        </div>
+      </div>
+    );
   };
 
   if (matches.length === 0) {
@@ -288,10 +434,11 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
               onClick={() => setSelectedBranch("all")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition ${
                 selectedBranch === "all"
-                  ? "bg-arena-elevated text-white border border-arena-border shadow-sm"
+                  ? "bg-arena-elevated text-white border border-arena-border shadow-sm ring-1 ring-arena-accent/30"
                   : "text-arena-muted hover:text-white"
               }`}
             >
+              <Layers className="w-3.5 h-3.5 text-arena-accent" />
               <span>View All</span>
               <span className="ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full bg-arena-surface border border-arena-border">
                 {branchCounts.all}
@@ -313,26 +460,32 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
           </div>
         )}
 
-        {/* Mobile Round Switcher */}
-        <div className="flex md:hidden items-center gap-2">
-          <button
-            onClick={() => setActiveMobileRound((r) => Math.max(1, r - 1))}
-            disabled={activeMobileRound === 1}
-            className="p-1.5 rounded-lg bg-arena-elevated border border-arena-border text-arena-muted disabled:opacity-30"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-bold text-arena-text">
-            {rounds.find((r) => r.roundNumber === activeMobileRound)?.name || "Round"}
+        {/* Mobile Navigation indicator */}
+        {!isViewAllDoubleElim && rounds.length > 1 ? (
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={() => setActiveMobileRound((r) => Math.max(1, r - 1))}
+              disabled={activeMobileRound === 1}
+              className="p-1.5 rounded-lg bg-arena-elevated border border-arena-border text-arena-muted disabled:opacity-30"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-bold text-arena-text">
+              {rounds.find((r) => r.roundNumber === activeMobileRound)?.name || "Round"}
+            </span>
+            <button
+              onClick={() => setActiveMobileRound((r) => Math.min(rounds.length, r + 1))}
+              disabled={activeMobileRound === rounds.length}
+              className="p-1.5 rounded-lg bg-arena-elevated border border-arena-border text-arena-muted disabled:opacity-30"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        ) : isViewAllDoubleElim ? (
+          <span className="text-xs font-mono font-semibold text-arena-highlight md:hidden">
+            Full Dual-Lane Overview
           </span>
-          <button
-            onClick={() => setActiveMobileRound((r) => Math.min(rounds.length, r + 1))}
-            disabled={activeMobileRound === rounds.length}
-            className="p-1.5 rounded-lg bg-arena-elevated border border-arena-border text-arena-muted disabled:opacity-30"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
+        ) : null}
 
         {/* Focus & Zoom Controls */}
         <div className="flex items-center gap-2 self-end md:self-auto">
@@ -450,71 +603,108 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
             ))}
           </svg>
 
-          {/* Render Round Columns */}
-          {rounds.map((round) => {
-            const isGrandFinals = round.bracketType === "grand_finals";
-            const isLosersBranch = round.bracketType === "losers";
-
-            return (
-              <div
-                key={`${round.bracketType}_${round.roundNumber}`}
-                className={`flex flex-col relative z-10 ${
-                  activeMobileRound === round.roundNumber ? "flex" : "hidden md:flex"
-                }`}
-              >
-                {/* Round Header */}
-                <div className="mb-6 flex flex-col items-center">
-                  <div
-                    className={`px-4 py-1.5 rounded-full border text-xs font-extrabold uppercase tracking-widest shadow-md flex items-center gap-1.5 backdrop-blur-sm ${
-                      isGrandFinals
-                        ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
-                        : isLosersBranch
-                        ? "bg-red-500/10 border-red-500/30 text-red-400"
-                        : "bg-arena-elevated/80 border-arena-border text-arena-text"
-                    }`}
-                  >
-                    {isGrandFinals ? (
-                      <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                    ) : isLosersBranch ? (
-                      <Flame className="w-3.5 h-3.5 text-red-400" />
-                    ) : (
-                      <Shield className="w-3.5 h-3.5 text-arena-accent" />
-                    )}
-                    <span>{round.name}</span>
+          {/* Conditional Layout: Dual-Lane Overview for View All vs Single Column Stream */}
+          {isViewAllDoubleElim ? (
+            /* Unified Double Elimination Overview: Upper & Lower Lanes + Grand Finals Climax */
+            <div className="flex flex-col lg:flex-row items-center gap-12 md:gap-16 relative z-10 min-w-max">
+              {/* Left Column: Upper and Lower Brackets */}
+              <div className="flex flex-col gap-10 min-w-max">
+                {/* Upper (Winners) Bracket Lane */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-arena-accent/15 border border-arena-accent/30 w-fit backdrop-blur-sm shadow-sm">
+                    <Shield className="w-4 h-4 text-arena-accent" />
+                    <span className="text-xs font-mono font-bold text-arena-highlight uppercase tracking-wider">
+                      Upper (Winners) Bracket
+                    </span>
+                    <span className="text-[10px] text-arena-muted font-mono font-semibold">
+                      • {branchCounts.winners} {branchCounts.winners === 1 ? "Match" : "Matches"}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-arena-muted font-mono font-semibold mt-1.5">
-                    {round.matches.length} {round.matches.length === 1 ? "Match" : "Matches"}
+
+                  <div className="flex gap-12 md:gap-16 items-stretch">
+                    {winnersRounds.map((round) => renderRoundColumn(round))}
+                  </div>
+                </div>
+
+                {/* Cyber Divider */}
+                <div className="relative w-full flex items-center justify-center my-1">
+                  <div className="w-full h-px bg-gradient-to-r from-transparent via-arena-borderLight/40 to-transparent" />
+                  <span className="absolute px-3.5 py-0.5 rounded-full bg-arena-card border border-arena-border text-[9px] font-mono text-arena-muted uppercase tracking-wider shadow-sm">
+                    Losers Drop to Lower Bracket
                   </span>
                 </div>
 
-                {/* Match Cards spaced evenly vertically */}
-                <div className="flex-1 flex flex-col justify-around gap-8 md:gap-12">
-                  {round.matches.map((match) => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      participantA={
-                        match.participant_a_id
-                          ? participantMap.get(match.participant_a_id) || null
-                          : null
-                      }
-                      participantB={
-                        match.participant_b_id
-                          ? participantMap.get(match.participant_b_id) || null
-                          : null
-                      }
-                      hasScoring={hasScoring}
-                      currentUserRole={currentUserRole}
-                      isChampionship={isGrandFinals || (!isDoubleElim && round.roundNumber === rounds.length)}
-                      onSelectWinner={onSelectWinner}
-                      onCorrectResult={onCorrectResult}
-                      onRenameParticipant={onRenameParticipant}
-                    />
-                  ))}
+                {/* Lower (Losers) Bracket Lane */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-500/15 border border-red-500/30 w-fit backdrop-blur-sm shadow-sm">
+                    <Flame className="w-4 h-4 text-red-400" />
+                    <span className="text-xs font-mono font-bold text-red-300 uppercase tracking-wider">
+                      Lower (Losers) Bracket
+                    </span>
+                    <span className="text-[10px] text-arena-muted font-mono font-semibold">
+                      • {branchCounts.losers} {branchCounts.losers === 1 ? "Match" : "Matches"}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-12 md:gap-16 items-stretch">
+                    {losersRounds.map((round) => renderRoundColumn(round))}
+                  </div>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Right Column: Grand Finals Championship Pillar */}
+              {grandFinalsMatches.length > 0 && (
+                <div className="flex flex-col items-center justify-center pl-4 lg:pl-10 lg:border-l lg:border-arena-border/50 self-stretch shrink-0">
+                  <div className="mb-6 flex flex-col items-center">
+                    <div className="px-4 py-1.5 rounded-full border border-amber-500/50 bg-amber-500/20 text-amber-300 text-xs font-extrabold uppercase tracking-widest shadow-glow flex items-center gap-1.5 backdrop-blur-sm">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span>Grand Finals</span>
+                    </div>
+                    <span className="text-[10px] text-arena-muted font-mono font-semibold mt-1.5">
+                      Championship Decider
+                    </span>
+                  </div>
+
+                  <div className="flex-1 flex flex-col justify-center gap-8 my-auto">
+                    {grandFinalsMatches.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        participantA={
+                          match.participant_a_id
+                            ? participantMap.get(match.participant_a_id) || null
+                            : null
+                        }
+                        participantB={
+                          match.participant_b_id
+                            ? participantMap.get(match.participant_b_id) || null
+                            : null
+                        }
+                        hasScoring={hasScoring}
+                        currentUserRole={currentUserRole}
+                        isChampionship={true}
+                        onSelectWinner={onSelectWinner}
+                        onCorrectResult={onCorrectResult}
+                        onRenameParticipant={onRenameParticipant}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Single Branch or Single Elimination View */
+            rounds.map((round) => (
+              <div
+                key={`${round.bracketType}_${round.roundNumber}`}
+                className={`${
+                  activeMobileRound === round.roundNumber ? "flex" : "hidden md:flex"
+                }`}
+              >
+                {renderRoundColumn(round)}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
