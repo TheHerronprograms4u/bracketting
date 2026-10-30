@@ -5,9 +5,28 @@
  */
 
 let audioCtx: AudioContext | null = null;
+let hasUserInteracted = false;
+
+if (typeof window !== "undefined") {
+  const handleInteraction = () => {
+    hasUserInteracted = true;
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
+  };
+  window.addEventListener("pointerdown", handleInteraction, { capture: true, passive: true });
+  window.addEventListener("keydown", handleInteraction, { capture: true, passive: true });
+  window.addEventListener("click", handleInteraction, { capture: true, passive: true });
+}
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
+
+  // Wait for user gesture before instantiating or resuming to comply with browser autoplay policies
+  if (!hasUserInteracted && (!audioCtx || audioCtx.state === "suspended")) {
+    return null;
+  }
+
   if (!audioCtx) {
     const AudioContextClass =
       window.AudioContext ||
@@ -17,7 +36,7 @@ function getAudioContext(): AudioContext | null {
     }
   }
   if (audioCtx && audioCtx.state === "suspended") {
-    audioCtx.resume();
+    audioCtx.resume().catch(() => {});
   }
   return audioCtx;
 }

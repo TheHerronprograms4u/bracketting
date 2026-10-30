@@ -161,38 +161,26 @@ export async function pushParticipantsToSupabase(participants: Participant[]): P
   if (!supabase || participants.length === 0) return false;
 
   try {
-    // 1. Try standard upsert (which succeeds if the 'roster' column exists in Supabase)
-    const { error } = await supabase.from("participants").upsert(participants);
-    if (!error) return true;
+    // Schema-safe participant payload.
+    // Omitting 'roster' prevents PostgREST from generating a 400 Bad Request error
+    // when the optional column is not present in the database.
+    const payload = participants.map((p) => {
+      const { roster, ...rest } = p;
+      return {
+        ...rest,
+        user_id:
+          roster && roster.length > 0
+            ? `ROSTER_DATA:${JSON.stringify(roster)}`
+            : (rest.user_id || null),
+      };
+    });
 
-    // 2. If 'roster' column is missing in Supabase schema cache (PGRST204)
-    const isRosterMissing =
-      error.code === "PGRST204" ||
-      (error.message && error.message.toLowerCase().includes("roster"));
-
-    if (isRosterMissing) {
-      console.warn("Supabase 'roster' column missing; using resilient fallback storage.");
-      const fallbackPayload = participants.map((p) => {
-        const { roster, ...rest } = p;
-        return {
-          ...rest,
-          user_id:
-            roster && roster.length > 0
-              ? `ROSTER_DATA:${JSON.stringify(roster)}`
-              : (rest.user_id || null),
-        };
-      });
-
-      const { error: fallbackError } = await supabase.from("participants").upsert(fallbackPayload);
-      if (fallbackError) {
-        console.warn("Supabase fallback participants upsert failed:", fallbackError.message);
-        return false;
-      }
-      return true;
+    const { error } = await supabase.from("participants").upsert(payload);
+    if (error) {
+      console.warn("Supabase participants upsert error:", error.message);
+      return false;
     }
-
-    console.warn("Supabase participants upsert error:", error.message);
-    return false;
+    return true;
   } catch (err) {
     console.warn("Supabase participants upsert exception:", err);
     return false;
