@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
+import { Footer } from "@/components/Footer";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -34,9 +35,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} font-sans antialiased text-arena-text min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pixelFont.variable} font-sans antialiased text-arena-text min-h-screen flex flex-col`}
       >
-        {children}
+        <div className="flex-1 flex flex-col">{children}</div>
+        <Footer />
       </body>
     </html>
   );

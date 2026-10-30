@@ -15,6 +15,7 @@ import {
   updateParticipant,
   removeParticipant,
   getCurrentUser,
+  syncFromSupabase,
 } from "@/lib/storage";
 import {
   TournamentDetails,
@@ -89,6 +90,7 @@ export default function TournamentDetailPage() {
 
   useEffect(() => {
     loadData();
+    syncFromSupabase();
 
     const handleRoleChanged = () => {
       const user = getCurrentUser();

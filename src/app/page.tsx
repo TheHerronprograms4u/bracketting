@@ -8,6 +8,7 @@ import {
   addParticipant,
   deleteTournament,
   initStorage,
+  syncFromSupabase,
   getCurrentUser,
   setCurrentUserRole,
 } from "@/lib/storage";
@@ -64,6 +65,7 @@ export default function HomePage() {
 
   useEffect(() => {
     refreshTournaments();
+    syncFromSupabase();
 
     const handleRoleChanged = () => {
       const user = getCurrentUser();

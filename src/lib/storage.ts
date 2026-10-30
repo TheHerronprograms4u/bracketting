@@ -81,6 +81,204 @@ function saveToStorage<T>(key: string, data: T): void {
 
 let isSyncing = false;
 let hasSynced = false;
+let isRealtimeInitialized = false;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+interface SupabaseParticipantRow {
+  id: string;
+  tournament_id: string;
+  user_id?: string | null;
+  display_name: string;
+  participant_type: "individual" | "team";
+  seed?: number | null;
+  registration_status: "confirmed" | "pending" | "withdrawn";
+  roster?: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function normalizeParticipantFromSupabase(row: SupabaseParticipantRow | Record<string, unknown>): Participant {
+  const rowId = String(row.id || "");
+  const tournamentId = String(row.tournament_id || "");
+  const displayName = String(row.display_name || "");
+  const participantType = (row.participant_type === "individual" ? "individual" : "team") as "individual" | "team";
+  const seed = typeof row.seed === "number" ? row.seed : null;
+  const regStatus = (row.registration_status || "confirmed") as "confirmed" | "pending" | "withdrawn";
+  const createdAt = String(row.created_at || new Date().toISOString());
+  const updatedAt = String(row.updated_at || new Date().toISOString());
+
+  let roster: string[] | undefined = Array.isArray(row.roster) ? (row.roster as string[]) : undefined;
+  let userId: string | null = typeof row.user_id === "string" ? row.user_id : null;
+
+  if (
+    (!roster || roster.length === 0) &&
+    typeof row.user_id === "string" &&
+    row.user_id.startsWith("ROSTER_DATA:")
+  ) {
+    try {
+      const parsed = JSON.parse(row.user_id.slice("ROSTER_DATA:".length));
+      if (Array.isArray(parsed)) {
+        roster = parsed;
+      }
+    } catch {
+      // ignore JSON parse error
+    }
+    userId = null;
+  }
+
+  return {
+    id: rowId,
+    tournament_id: tournamentId,
+    user_id: userId,
+    display_name: displayName,
+    participant_type: participantType,
+    seed,
+    registration_status: regStatus,
+    roster,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  };
+}
+
+export async function pushTournamentToSupabase(tournament: Tournament): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("tournaments").upsert(tournament);
+    if (error) {
+      console.warn("Supabase tournament upsert:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Supabase tournament upsert exception:", err);
+    return false;
+  }
+}
+
+export async function pushParticipantsToSupabase(participants: Participant[]): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase || participants.length === 0) return false;
+
+  try {
+    // 1. Try standard upsert (which succeeds if the 'roster' column exists in Supabase)
+    const { error } = await supabase.from("participants").upsert(participants);
+    if (!error) return true;
+
+    // 2. If 'roster' column is missing in Supabase schema cache (PGRST204)
+    const isRosterMissing =
+      error.code === "PGRST204" ||
+      (error.message && error.message.toLowerCase().includes("roster"));
+
+    if (isRosterMissing) {
+      console.warn("Supabase 'roster' column missing; using resilient fallback storage.");
+      const fallbackPayload = participants.map((p) => {
+        const { roster, ...rest } = p;
+        return {
+          ...rest,
+          user_id:
+            roster && roster.length > 0
+              ? `ROSTER_DATA:${JSON.stringify(roster)}`
+              : (rest.user_id || null),
+        };
+      });
+
+      const { error: fallbackError } = await supabase.from("participants").upsert(fallbackPayload);
+      if (fallbackError) {
+        console.warn("Supabase fallback participants upsert failed:", fallbackError.message);
+        return false;
+      }
+      return true;
+    }
+
+    console.warn("Supabase participants upsert error:", error.message);
+    return false;
+  } catch (err) {
+    console.warn("Supabase participants upsert exception:", err);
+    return false;
+  }
+}
+
+export async function pushMatchesToSupabase(matches: Match[]): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase || matches.length === 0) return false;
+  try {
+    const { error } = await supabase.from("matches").upsert(matches);
+    if (error) {
+      console.warn("Supabase matches upsert:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Supabase matches upsert exception:", err);
+    return false;
+  }
+}
+
+export async function deleteParticipantFromSupabase(participantId: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("participants").delete().eq("id", participantId);
+    if (error) {
+      console.warn("Supabase participant delete:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Supabase participant delete exception:", err);
+    return false;
+  }
+}
+
+export async function deleteMatchesFromSupabase(tournamentId: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("matches").delete().eq("tournament_id", tournamentId);
+    if (error) {
+      console.warn("Supabase matches delete:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Supabase matches delete exception:", err);
+    return false;
+  }
+}
+
+export async function pushLogToSupabase(log: ActivityLog): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase.from("activity_logs").insert(log);
+    if (error) {
+      console.warn("Supabase activity_logs insert:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Supabase activity_logs insert exception:", err);
+    return false;
+  }
+}
+
+export async function deleteTournamentFromSupabase(tournamentId: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return false;
+  try {
+    await Promise.all([
+      supabase.from("matches").delete().eq("tournament_id", tournamentId),
+      supabase.from("participants").delete().eq("tournament_id", tournamentId),
+      supabase.from("activity_logs").delete().eq("tournament_id", tournamentId),
+      supabase.from("tournaments").delete().eq("id", tournamentId),
+    ]);
+    return true;
+  } catch (err) {
+    console.warn("Supabase tournament delete exception:", err);
+    return false;
+  }
+}
 
 export async function syncFromSupabase(): Promise<void> {
   const supabase = getSupabaseClient();
@@ -95,116 +293,125 @@ export async function syncFromSupabase(): Promise<void> {
       supabase.from("activity_logs").select("*").order("timestamp", { ascending: false }),
     ]);
 
-    let hadUpdates = false;
+    const remoteTournaments: Tournament[] = tRes.data || [];
+    const remoteParticipants: Participant[] = (pRes.data || []).map(normalizeParticipantFromSupabase);
+    const remoteMatches: Match[] = mRes.data || [];
+    const remoteLogs: ActivityLog[] = lRes.data || [];
 
-    if (tRes.data && tRes.data.length > 0) {
-      saveToStorage(STORAGE_KEY_TOURNAMENTS, tRes.data);
-      hadUpdates = true;
-    }
-    if (pRes.data && pRes.data.length > 0) {
-      saveToStorage(STORAGE_KEY_PARTICIPANTS, pRes.data);
-      hadUpdates = true;
-    }
-    if (mRes.data && mRes.data.length > 0) {
-      saveToStorage(STORAGE_KEY_MATCHES, mRes.data);
-      hadUpdates = true;
-    }
-    if (lRes.data && lRes.data.length > 0) {
-      saveToStorage(STORAGE_KEY_LOGS, lRes.data);
-      hadUpdates = true;
+    // Current local state
+    const localTourneys = loadFromStorage<Tournament[]>(STORAGE_KEY_TOURNAMENTS, memoryStore.tournaments);
+    const localParts = loadFromStorage<Participant[]>(STORAGE_KEY_PARTICIPANTS, memoryStore.participants);
+    const localMatches = loadFromStorage<Match[]>(STORAGE_KEY_MATCHES, memoryStore.matches);
+
+    const remoteTourneyIds = new Set(remoteTournaments.map((t) => t.id));
+    const remotePartIds = new Set(remoteParticipants.map((p) => p.id));
+    const remoteMatchIds = new Set(remoteMatches.map((m) => m.id));
+
+    // 1. Reconcile unsynced local participants (e.g. from laptop before sync)
+    const unsyncedParts = localParts.filter(
+      (p) => !remotePartIds.has(p.id) && remoteTourneyIds.has(p.tournament_id)
+    );
+    if (unsyncedParts.length > 0) {
+      console.info(`Syncing ${unsyncedParts.length} local participants up to Supabase...`);
+      const success = await pushParticipantsToSupabase(unsyncedParts);
+      if (success) {
+        remoteParticipants.push(...unsyncedParts);
+        unsyncedParts.forEach((p) => remotePartIds.add(p.id));
+      }
     }
 
-    if (hadUpdates) {
-      window.dispatchEvent(new Event("arena_storage_synced"));
+    // 2. Reconcile unsynced local matches (if bracket was generated locally)
+    const unsyncedMatches = localMatches.filter(
+      (m) => !remoteMatchIds.has(m.id) && remoteTourneyIds.has(m.tournament_id)
+    );
+    if (unsyncedMatches.length > 0) {
+      console.info(`Syncing ${unsyncedMatches.length} local matches up to Supabase...`);
+      const success = await pushMatchesToSupabase(unsyncedMatches);
+      if (success) {
+        remoteMatches.push(...unsyncedMatches);
+        unsyncedMatches.forEach((m) => remoteMatchIds.add(m.id));
+      }
     }
+
+    // 3. Reconcile tournament status updates (if bracket was generated locally, ensure status is in_progress in Supabase)
+    for (const lt of localTourneys) {
+      const rt = remoteTournaments.find((t) => t.id === lt.id);
+      if (rt && lt.status !== rt.status && (lt.status === "in_progress" || lt.status === "completed")) {
+        console.info(`Syncing tournament status '${lt.status}' for ${lt.name} to Supabase...`);
+        await pushTournamentToSupabase(lt);
+        Object.assign(rt, lt);
+      }
+    }
+
+    // 4. Update local storage with authoritative cloud state
+    if (remoteTournaments.length > 0 || localTourneys.length === 0) {
+      saveToStorage(STORAGE_KEY_TOURNAMENTS, remoteTournaments);
+    }
+    saveToStorage(STORAGE_KEY_PARTICIPANTS, remoteParticipants);
+    saveToStorage(STORAGE_KEY_MATCHES, remoteMatches);
+    if (remoteLogs.length > 0) {
+      saveToStorage(STORAGE_KEY_LOGS, remoteLogs);
+    }
+
+    window.dispatchEvent(new Event("arena_storage_synced"));
   } catch (err) {
-    console.warn("Supabase background sync failed, operating in local storage mode:", err);
+    console.warn("Supabase sync failed, operating in local storage mode:", err);
   } finally {
     isSyncing = false;
   }
 }
 
-function pushTournamentToSupabase(tournament: Tournament) {
-  const supabase = getSupabaseClient();
-  if (!supabase) return;
-  supabase
-    .from("tournaments")
-    .upsert(tournament)
-    .then(({ error }) => {
-      if (error) console.warn("Supabase tournament upsert:", error.message);
-    });
-}
+export function setupCloudSyncListeners(): void {
+  if (!isBrowser() || !isSupabaseConfigured() || isRealtimeInitialized) return;
+  isRealtimeInitialized = true;
 
-function pushParticipantsToSupabase(participants: Participant[]) {
   const supabase = getSupabaseClient();
-  if (!supabase || participants.length === 0) return;
-  supabase
-    .from("participants")
-    .upsert(participants)
-    .then(({ error }) => {
-      if (error) console.warn("Supabase participants upsert:", error.message);
-    });
-}
+  if (supabase) {
+    try {
+      supabase
+        .channel("arena_realtime_sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "tournaments" },
+          () => syncFromSupabase()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "participants" },
+          () => syncFromSupabase()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "matches" },
+          () => syncFromSupabase()
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "activity_logs" },
+          () => syncFromSupabase()
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn("Supabase Realtime subscription error:", e);
+    }
+  }
 
-function deleteParticipantFromSupabase(participantId: string) {
-  const supabase = getSupabaseClient();
-  if (!supabase) return;
-  supabase
-    .from("participants")
-    .delete()
-    .eq("id", participantId)
-    .then(({ error }) => {
-      if (error) console.warn("Supabase participant delete:", error.message);
-    });
-}
-
-function pushMatchesToSupabase(matches: Match[]) {
-  const supabase = getSupabaseClient();
-  if (!supabase || matches.length === 0) return;
-  supabase
-    .from("matches")
-    .upsert(matches)
-    .then(({ error }) => {
-      if (error) console.warn("Supabase matches upsert:", error.message);
-    });
-}
-
-function deleteMatchesFromSupabase(tournamentId: string) {
-  const supabase = getSupabaseClient();
-  if (!supabase) return;
-  supabase
-    .from("matches")
-    .delete()
-    .eq("tournament_id", tournamentId)
-    .then(({ error }) => {
-      if (error) console.warn("Supabase matches delete:", error.message);
-    });
-}
-
-function pushLogToSupabase(log: ActivityLog) {
-  const supabase = getSupabaseClient();
-  if (!supabase) return;
-  supabase
-    .from("activity_logs")
-    .insert(log)
-    .then(({ error }) => {
-      if (error) console.warn("Supabase activity_logs insert:", error.message);
-    });
-}
-
-function deleteTournamentFromSupabase(tournamentId: string) {
-  const supabase = getSupabaseClient();
-  if (!supabase) return;
-  Promise.all([
-    supabase.from("matches").delete().eq("tournament_id", tournamentId),
-    supabase.from("participants").delete().eq("tournament_id", tournamentId),
-    supabase.from("activity_logs").delete().eq("tournament_id", tournamentId),
-    supabase.from("tournaments").delete().eq("id", tournamentId),
-  ]).then((results) => {
-    results.forEach(({ error }) => {
-      if (error) console.warn("Supabase tournament delete:", error.message);
-    });
+  // Refresh whenever user switches back to the tab/app
+  window.addEventListener("focus", () => {
+    syncFromSupabase();
   });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      syncFromSupabase();
+    }
+  });
+
+  // Periodic polling fallback (every 8 seconds) to guarantee other devices stay up-to-date
+  if (!pollTimer) {
+    pollTimer = setInterval(() => {
+      syncFromSupabase();
+    }, 8000);
+  }
 }
 
 export function initStorage(): void {
@@ -247,9 +454,12 @@ export function initStorage(): void {
   }
 
   // Auto sync cloud data if Supabase credentials are configured
-  if (isSupabaseConfigured() && !hasSynced) {
-    hasSynced = true;
-    syncFromSupabase();
+  if (isSupabaseConfigured()) {
+    setupCloudSyncListeners();
+    if (!hasSynced) {
+      hasSynced = true;
+      syncFromSupabase();
+    }
   }
 }
 
@@ -814,8 +1024,10 @@ export function generateTournamentBracket(tournamentId: string): TournamentDetai
     `Bracket generated for ${updatedParticipants.length} participants.`
   );
 
-  pushMatchesToSupabase(newMatches);
-  pushParticipantsToSupabase(updatedParticipants);
+  // Push participants first so Postgres foreign key constraints on matches are satisfied
+  pushParticipantsToSupabase(updatedParticipants).then(() => {
+    pushMatchesToSupabase(newMatches);
+  });
 
   return getTournamentById(tournamentId)!;
 }
